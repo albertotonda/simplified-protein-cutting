@@ -4,11 +4,7 @@ Modeling protein hydrolysis and release of peptides by endoproteases requires co
 
 This repository contains the code for an alternative approach, published in [Tonda et al. (2017), _In silico modeling of protein hydrolysis by endoproteases: a case study on pepsin digestion of bovine lactoferrin_, Food & Function, Vol. 8, Issue 12, DOI: 10.1039/C7FO00830A](https://pubs.rsc.org/fo/article-abstract/8/12/4404/566726/In-silico-modeling-of-protein-hydrolysis-by). The idea is to just consider the linear sequence of amino-acids, and then simulate the behavior of an enzyme starting from the frequency of cuts observed during previous experiments. The final peptides obtained by the simulation are qualitatively coherent with real-world experiments, even though the exact absolute quantities might be different.
 
-If you use this software in your publications, please cite:
-
-> Tonda, Alberto and Grosvenor, Anita J and Clerens, Stefan and Le Feunteun, Steven,
-> "In silico modeling of protein hydrolysis by endoproteases: a case study on pepsin digestion of bovine lactoferrin",
-> Food & Function, 2017, DOI: 10.1039/C7FO00830A
+If you use this software in your publications, please cite the paper (see [Citation](#citation) below).
 
 ## What is this software?
 
@@ -82,6 +78,37 @@ The program produces a CSV file (`statistics.csv` by default) tracking the quant
 - ✅ Configuration format switched from XML to JSON.
 - ✅ Logging rewritten (leveled, quiet by default, opt-in file output) in preparation for reuse from other languages.
 - ⏳ Planned: Python bindings, packaging the core simulation as an installable Python package.
+
+## Citation
+
+If you use this software in your publications, please cite:
+
+> Tonda, Alberto and Grosvenor, Anita J and Clerens, Stefan and Le Feunteun, Steven,
+> "In silico modeling of protein hydrolysis by endoproteases: a case study on pepsin digestion of bovine lactoferrin",
+> Food & Function, 2017, DOI: 10.1039/C7FO00830A
+
+<details>
+<summary>BibTeX</summary>
+
+```bibtex
+@article{tonda2017insilico,
+    author = {Tonda, Alberto and Grosvenor, Anita and Clerens, Stefan and Le Feunteun, Steven},
+    title = {In silico modeling of protein hydrolysis by endoproteases: a case study on pepsin digestion of bovine lactoferrin},
+    journal = {Food \& Function},
+    volume = {8},
+    number = {12},
+    pages = {4404-4413},
+    year = {2017},
+    month = {12},
+    abstract = {This paper presents a novel model of protein hydrolysis and release of peptides by endoproteases. It requires the amino-acid sequence of the protein substrate to run, and makes use of simple Monte-Carlo in silico simulations to qualitatively and quantitatively predict the peptides that are likely to be produced during the course of the proteolytic reaction. In the present study, the model is applied to the case of pepsin, the gastric protease. Unlike pancreatic proteases, pepsin has a low substrate specificity and therefore displays a stochastic behavior that is particularly challenging to model and predict. Two versions of the model are studied and compared with peptidomic data obtained during pepsin hydrolysis of bovine lactoferrin. The first version of the model takes into account cleavage probabilities according to the amino acids in position P1–P1′ only, whereas the second version also accounts for the influence of neighbor amino acids (P4, P3, P2, P2′, P3′, P4′) and peptide terminal ends. The second version of the model was able to reproduce many real-world features of the reported behavior of pepsin, such as the peptide size distribution, or the quantity of free amino-acids. More remarkably, 50\% of the experimentally monitored peptides (44/87) lay within the 120 most abundant simulated peptides. The presented methodology has the advantage of being applicable not only to different proteins, but to different enzymes as well, as long as cleavage frequency data are available.},
+    issn = {2042-6496},
+    doi = {10.1039/c7fo00830a},
+    url = {https://doi.org/10.1039/c7fo00830a},
+    eprint = {https://pubs.rsc.org/fo/article-pdf/8/12/4404/5512608/c7fo00830a.pdf},
+}
+```
+
+</details>
 
 ## License
 
