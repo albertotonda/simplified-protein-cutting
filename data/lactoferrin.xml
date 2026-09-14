@@ -1,0 +1,663 @@
+<configuration>
+
+	<parameters>
+		<!-- activate/deactivate fixed random seed -->
+		<!-- <randomSeed value="42"/> -->
+		<maxTime value="1200000"/> <!-- stop condition: stop after maximum time reached (in seconds) -->
+		<maxDH value="0.10"/> <!-- stop condition: stop after reaching the given degree of hydrolysis (DH) -->
+		<maxAttemptsPerTime value="1"/> <!-- how many attempts to cut should the simulated pepsin perform, per iteration -->
+		<maxAttempts value="1000"/> <!-- stop condition: stop after failing this many consecutive attempts to cut -->
+
+		<!-- THE FOLLOWING THREE LINES ARE EXPERIMENTAL, I ADVISE TO NOT MODIFY THEM
+			pepsin 'dies out' during the process, so it is more effective at the beginning; we thought it could be
+			interesting to have pepsin reduce its probability of activation during time, but the code is not ready
+		-->
+		<initialPepsin value="1.0"/>  
+		<pepsinAlwaysDying value="false"/>
+		<pepsinDyingRatio value="1.0"/>
+	</parameters>
+
+	<!-- 	here you can define multiple proteins, each one with a number of copies (attribute "quantity"). Proteins also have places that pepsin finds it
+		harder to cut, their positions (starting from index 0) are in the attribute 'disulfideBonds', even if not all of them are disulfide bonds,
+		some are glycolysations
+	-->
+	<proteins>
+		<protein name="lactoferrin" quantity="500" disulfideBonds="9 19 36 45 115 157 170 173 181 198 231 245 348 358 371 380 405 425 457 481 491 502 505 515 532 573 587 625 630 647 675 684 233 368 476 545">
+a prknvrwcti sqpewfkcrr wqwrmkklga psitcvrraf
+aleciraiae kkadavtldg gmvfeagrdp yklrpvaaei ygtkespqth yyavavvkkg
+snfqldqlqg rkschtglgr sagwiipmgi lrpylswtes leplqgavak ffsascvpci
+drqaypnlcq lckgegenqc acssrepyfg ysgafkclqd gagdvafvke ttvfenlpek
+adrdqyellc lnnsrapvda fkechlaqvp shavvarsvd gkedliwkll skaqekfgkn
+ksrsfqlfgs ppgqrdllfk dsalgflrip skvdsalylg srylttlknl retaeevkar
+ytrvvwcavg peeqkkcqqw sqqsgqnvtc atasttddci vlvlkgeada lnldggyiyt
+agkcglvpvl aenrktskhs sldcvlrpte gylavavvkk anegltwnsl kdkkschtav
+drtagwnipm glivnqtgsc afdeffsqsc apgadpksrl calcagddqg ldkcvpnske
+kyygytgafr claedvgdva fvkndtvwen tngestadwa knlnredfrl lcldgtrkpv
+teaqschlav apnhavvsrs draahvkqvl lhqqalfgkn gkncpdkfcl fksetknllf
+ndnteclakl ggrptyeeyl gteyvtaian lkkcstspll eacafltr
+</protein>
+	</proteins>
+
+
+	<!-- 	here are the basic probabilities of cutting a bond, depending on the presence
+		of certain amino-acids in position P1-P1'; probabilities here are taken from
+		Hamuro et al., 2008
+	-->
+	<cuts>
+		<!-- f on the left -->
+		<cut left="f" right="y" probability="0.65"/>
+		<cut left="f" right="f" probability="0.85"/>
+		<cut left="f" right="w" probability="0.60"/>
+		<cut left="f" right="i" probability="0.65"/>
+		<cut left="f" right="m" probability="0.83"/>
+		<cut left="f" right="v" probability="0.50"/>
+		<cut left="f" right="l" probability="0.64"/>
+		<cut left="f" right="c" probability="0.20"/>
+		<cut left="f" right="a" probability="0.55"/>
+		<cut left="f" right="e" probability="0.42"/>
+		<cut left="f" right="d" probability="0.44"/>
+		<cut left="f" right="r" probability="0.42"/>
+		<cut left="f" right="n" probability="0.42"/>
+		<cut left="f" right="s" probability="0.52"/>
+		<cut left="f" right="t" probability="0.31"/>
+		<cut left="f" right="h" probability="0.43"/>
+		<cut left="f" right="k" probability="0.47"/>
+		<cut left="f" right="q" probability="0.33"/>
+		<cut left="f" right="p" probability="0.17"/>
+		<cut left="f" right="g" probability="0.28"/>
+		
+		<!-- l on the left -->
+		<cut left="l" right="y" probability="0.68"/>
+		<cut left="l" right="f" probability="0.84"/>
+		<cut left="l" right="w" probability="0.60"/>
+		<cut left="l" right="i" probability="0.63"/>
+		<cut left="l" right="m" probability="0.58"/>
+		<cut left="l" right="v" probability="0.53"/>
+		<cut left="l" right="l" probability="0.56"/>
+		<cut left="l" right="c" probability="0.54"/>
+		<cut left="l" right="a" probability="0.54"/>
+		<cut left="l" right="e" probability="0.45"/>
+		<cut left="l" right="d" probability="0.46"/>
+		<cut left="l" right="r" probability="0.34"/>
+		<cut left="l" right="n" probability="0.45"/>
+		<cut left="l" right="s" probability="0.42"/>
+		<cut left="l" right="t" probability="0.27"/>
+		<cut left="l" right="h" probability="0.33"/>
+		<cut left="l" right="k" probability="0.33"/>
+		<cut left="l" right="q" probability="0.26"/>
+		<cut left="l" right="p" probability="0.24"/>
+		<cut left="l" right="g" probability="0.07"/>
+
+		<!-- m on the left -->
+		<cut left="m" right="y" probability="0.30"/>
+		<cut left="m" right="f" probability="0.64"/>
+		<cut left="m" right="w" probability="0.50"/>
+		<cut left="m" right="i" probability="0.62"/>
+		<cut left="m" right="m" probability="0.42"/>
+		<cut left="m" right="v" probability="0.61"/>
+		<cut left="m" right="l" probability="0.66"/>
+		<cut left="m" right="c" probability="0"/> <!-- probability 0 -->
+		<cut left="m" right="a" probability="0.38"/>
+		<cut left="m" right="e" probability="0.29"/>
+		<cut left="m" right="d" probability="0.38"/>
+		<cut left="m" right="r" probability="0.26"/>
+		<cut left="m" right="n" probability="0.07"/>
+		<cut left="m" right="s" probability="0.22"/>
+		<cut left="m" right="t" probability="0.25"/>
+		<cut left="m" right="h" probability="0.29"/>
+		<cut left="m" right="k" probability="0.32"/>
+		<cut left="m" right="q" probability="0.17"/>
+		<cut left="m" right="p" probability="0.18"/>
+		<cut left="m" right="g" probability="0.08"/>
+
+		<!-- c on the left -->
+		<cut left="c" right="y" probability="0.25"/>
+		<cut left="c" right="f" probability="0.75"/>
+		<cut left="c" right="w" probability="0.57"/>
+		<cut left="c" right="i" probability="0.40"/>
+		<cut left="c" right="m" probability="0"/> <!-- probability 0 -->
+		<cut left="c" right="v" probability="0.21"/>
+		<cut left="c" right="l" probability="0.36"/>
+		<cut left="c" right="c" probability="0.50"/>
+		<cut left="c" right="a" probability="0.18"/>
+		<cut left="c" right="e" probability="0.20"/>
+		<cut left="c" right="d" probability="0"/> <!-- probability 0 -->
+		<cut left="c" right="r" probability="0.29"/>
+		<cut left="c" right="n" probability="0"/> <!-- probability 0 -->
+		<cut left="c" right="s" probability="0"/> <!-- probability 0 -->
+		<cut left="c" right="t" probability="0.35"/>
+		<cut left="c" right="h" probability="0.17"/>
+		<cut left="c" right="k" probability="0"/> <!-- probability 0 -->
+		<cut left="c" right="q" probability="0"/> <!-- probability 0 -->
+		<cut left="c" right="p" probability="0.20"/>
+		<cut left="c" right="g" probability="0.06"/>
+		
+		<!-- e on the left -->
+		<cut left="e" right="y" probability="0.70"/>
+		<cut left="e" right="f" probability="0.53"/>
+		<cut left="e" right="w" probability="0.63"/>
+		<cut left="e" right="i" probability="0.36"/>
+		<cut left="e" right="m" probability="0.29"/>
+		<cut left="e" right="v" probability="0.31"/>
+		<cut left="e" right="l" probability="0.21"/>
+		<cut left="e" right="c" probability="0.36"/>
+		<cut left="e" right="a" probability="0.35"/>
+		<cut left="e" right="e" probability="0.09"/>
+		<cut left="e" right="d" probability="0.11"/>
+		<cut left="e" right="r" probability="0.09"/>
+		<cut left="e" right="n" probability="0.13"/>
+		<cut left="e" right="s" probability="0.04"/>
+		<cut left="e" right="t" probability="0.03"/>
+		<cut left="e" right="h" probability="0.06"/>
+		<cut left="e" right="k" probability="0.12"/>
+		<cut left="e" right="q" probability="0.11"/>
+		<cut left="e" right="p" probability="0.08"/>
+		<cut left="e" right="g" probability="0.01"/>
+
+		<!-- w on the left -->
+		<cut left="w" right="y" probability="0.71"/>
+		<cut left="w" right="f" probability="0.40"/>
+		<cut left="w" right="w" probability="0"/> <!-- in fact, the link w-w has never been observed! -->
+		<cut left="w" right="i" probability="0.15"/>
+		<cut left="w" right="m" probability="0.33"/>
+		<cut left="w" right="v" probability="0.10"/>
+		<cut left="w" right="l" probability="0.29"/>
+		<cut left="w" right="c" probability="0.22"/>
+		<cut left="w" right="a" probability="0.08"/>
+		<cut left="w" right="e" probability="0.24"/>
+		<cut left="w" right="d" probability="0.21"/>
+		<cut left="w" right="r" probability="0.13"/>
+		<cut left="w" right="n" probability="0"/> <!-- probability 0 -->
+		<cut left="w" right="s" probability="0.06"/>
+		<cut left="w" right="t" probability="0.29"/>
+		<cut left="w" right="h" probability="0"/> <!-- probability 0 -->
+		<cut left="w" right="k" probability="0.13"/>
+		<cut left="w" right="q" probability="0"/> <!-- probability 0 -->
+		<cut left="w" right="p" probability="0"/> <!-- probability 0 -->
+		<cut left="w" right="g" probability="0"/> <!-- probability 0 -->
+
+		<!-- y on the left -->
+		<cut left="y" right="y" probability="0.36"/>
+		<cut left="y" right="f" probability="0.33"/>
+		<cut left="y" right="w" probability="0.50"/>
+		<cut left="y" right="i" probability="0.20"/>
+		<cut left="y" right="m" probability="0.25"/>
+		<cut left="y" right="v" probability="0.16"/>
+		<cut left="y" right="l" probability="0.25"/>
+		<cut left="y" right="c" probability="0"/> <!-- probability 0 -->
+		<cut left="y" right="a" probability="0.09"/>
+		<cut left="y" right="e" probability="0.19"/>
+		<cut left="y" right="d" probability="0.17"/>
+		<cut left="y" right="r" probability="0.16"/>
+		<cut left="y" right="n" probability="0.11"/>
+		<cut left="y" right="s" probability="0.14"/>
+		<cut left="y" right="t" probability="0.04"/>
+		<cut left="y" right="h" probability="0.10"/>
+		<cut left="y" right="k" probability="0"/> <!-- probability 0 -->
+		<cut left="y" right="q" probability="0.20"/>
+		<cut left="y" right="p" probability="0.06"/>
+		<cut left="y" right="g" probability="0.10"/>
+
+		<!-- d on the left -->
+		<cut left="d" right="y" probability="0.48"/>
+		<cut left="d" right="f" probability="0.37"/>
+		<cut left="d" right="w" probability="0.17"/>
+		<cut left="d" right="i" probability="0.42"/>
+		<cut left="d" right="m" probability="0.20"/>
+		<cut left="d" right="v" probability="0.25"/>
+		<cut left="d" right="l" probability="0.12"/>
+		<cut left="d" right="c" probability="0.33"/>
+		<cut left="d" right="a" probability="0.13"/>
+		<cut left="d" right="e" probability="0.06"/>
+		<cut left="d" right="d" probability="0.05"/>
+		<cut left="d" right="r" probability="0.09"/>
+		<cut left="d" right="n" probability="0"/> <!-- probability 0 -->
+		<cut left="d" right="s" probability="0.02"/>
+		<cut left="d" right="t" probability="0.12"/>
+		<cut left="d" right="h" probability="0.15"/>
+		<cut left="d" right="k" probability="0.02"/>
+		<cut left="d" right="q" probability="0"/> <!-- probability 0 -->
+		<cut left="d" right="p" probability="0"/> <!-- probability 0 -->
+		<cut left="d" right="g" probability="0"/> <!-- probability 0 -->
+
+		<!-- a on the left -->
+		<cut left="a" right="y" probability="0.48"/>
+		<cut left="a" right="f" probability="0.38"/>
+		<cut left="a" right="w" probability="0.17"/>
+		<cut left="a" right="i" probability="0.30"/>
+		<cut left="a" right="m" probability="0.30"/>
+		<cut left="a" right="v" probability="0.28"/>
+		<cut left="a" right="l" probability="0.16"/>
+		<cut left="a" right="c" probability="0.06"/>
+		<cut left="a" right="a" probability="0.14"/>
+		<cut left="a" right="e" probability="0.06"/>
+		<cut left="a" right="d" probability="0.05"/>
+		<cut left="a" right="r" probability="0.08"/>
+		<cut left="a" right="n" probability="0.04"/>
+		<cut left="a" right="s" probability="0.05"/>
+		<cut left="a" right="t" probability="0.05"/>
+		<cut left="a" right="h" probability="0.22"/>
+		<cut left="a" right="k" probability="0.03"/>
+		<cut left="a" right="q" probability="0"/> <!-- probability 0 -->
+		<cut left="a" right="p" probability="0.05"/>
+		<cut left="a" right="g" probability="0"/> <!-- probability 0 -->
+
+		<!-- q on the left -->
+		<cut left="q" right="y" probability="0.47"/>
+		<cut left="q" right="f" probability="0.24"/>
+		<cut left="q" right="w" probability="0.33"/>
+		<cut left="q" right="i" probability="0.40"/>
+		<cut left="q" right="m" probability="0.20"/>
+		<cut left="q" right="v" probability="0.23"/>
+		<cut left="q" right="l" probability="0.07"/>
+		<cut left="q" right="c" probability="0.33"/>
+		<cut left="q" right="a" probability="0.07"/>
+		<cut left="q" right="e" probability="0.02"/>
+		<cut left="q" right="d" probability="0"/> <!-- probability 0 -->
+		<cut left="q" right="r" probability="0.06"/>
+		<cut left="q" right="n" probability="0.05"/>
+		<cut left="q" right="s" probability="0"/> <!-- probability 0 -->
+		<cut left="q" right="t" probability="0.03"/>
+		<cut left="q" right="h" probability="0.15"/>
+		<cut left="q" right="k" probability="0.03"/>
+		<cut left="q" right="q" probability="0"/> <!-- probability 0 -->
+		<cut left="q" right="p" probability="0"/> <!-- probability 0 -->
+		<cut left="q" right="g" probability="0"/> <!-- probability 0 -->
+
+		<!-- n on the left -->
+		<cut left="n" right="y" probability="0.39"/>
+		<cut left="n" right="f" probability="0.28"/>
+		<cut left="n" right="w" probability="0.38"/>
+		<cut left="n" right="i" probability="0.25"/>
+		<cut left="n" right="m" probability="0"/> <!-- probability 0 -->
+		<cut left="n" right="v" probability="0.16"/>
+		<cut left="n" right="l" probability="0.04"/>
+		<cut left="n" right="c" probability="0.25"/>
+		<cut left="n" right="a" probability="0.09"/>
+		<cut left="n" right="e" probability="0"/> <!-- probability 0 -->
+		<cut left="n" right="d" probability="0.05"/>
+		<cut left="n" right="r" probability="0.04"/>
+		<cut left="n" right="n" probability="0"/> <!-- probability 0 -->
+		<cut left="n" right="s" probability="0"/> <!-- probability 0 -->
+		<cut left="n" right="t" probability="0.06"/>
+		<cut left="n" right="h" probability="0"/> <!-- probability 0 -->
+		<cut left="n" right="k" probability="0"/> <!-- probability 0 -->
+		<cut left="n" right="q" probability="0"/> <!-- probability 0 -->
+		<cut left="n" right="p" probability="0"/> <!-- probability 0 -->
+		<cut left="n" right="g" probability="0"/> <!-- probability 0 -->
+
+		<!-- t on the left -->
+		<cut left="t" right="y" probability="0.23"/>
+		<cut left="t" right="f" probability="0.21"/>
+		<cut left="t" right="w" probability="0.17"/>
+		<cut left="t" right="i" probability="0.18"/>
+		<cut left="t" right="m" probability="0.11"/>
+		<cut left="t" right="v" probability="0.11"/>
+		<cut left="t" right="l" probability="0.08"/>
+		<cut left="t" right="c" probability="0"/> <!-- probability 0 -->
+		<cut left="t" right="a" probability="0.07"/>
+		<cut left="t" right="e" probability="0"/> <!-- probability 0 -->
+		<cut left="t" right="d" probability="0.02"/>
+		<cut left="t" right="r" probability="0"/> <!-- probability 0 -->
+		<cut left="t" right="n" probability="0"/> <!-- probability 0 -->
+		<cut left="t" right="s" probability="0.05"/>
+		<cut left="t" right="t" probability="0.09"/>
+		<cut left="t" right="h" probability="0.11"/>
+		<cut left="t" right="k" probability="0.04"/>
+		<cut left="t" right="q" probability="0"/> <!-- probability 0 -->
+		<cut left="t" right="p" probability="0"/> <!-- probability 0 -->
+		<cut left="t" right="g" probability="0"/> <!-- probability 0 -->
+
+		<!-- s on the left -->
+		<cut left="s" right="y" probability="0.31"/>
+		<cut left="s" right="f" probability="0.05"/>
+		<cut left="s" right="w" probability="0.23"/>
+		<cut left="s" right="i" probability="0.13"/>
+		<cut left="s" right="m" probability="0"/> <!-- probability 0 -->
+		<cut left="s" right="v" probability="0.12"/>
+		<cut left="s" right="l" probability="0.04"/>
+		<cut left="s" right="c" probability="0.20"/>
+		<cut left="s" right="a" probability="0.06"/>
+		<cut left="s" right="e" probability="0.04"/>
+		<cut left="s" right="d" probability="0.02"/>
+		<cut left="s" right="r" probability="0.05"/>
+		<cut left="s" right="n" probability="0.04"/>
+		<cut left="s" right="s" probability="0.02"/>
+		<cut left="s" right="t" probability="0.03"/>
+		<cut left="s" right="h" probability="0.03"/>
+		<cut left="s" right="k" probability="0"/> <!-- probability 0 -->
+		<cut left="s" right="q" probability="0"/> <!-- probability 0 -->
+		<cut left="s" right="p" probability="0.02"/>
+		<cut left="s" right="g" probability="0"/> <!-- probability 0 -->
+
+		<!-- g on the left -->
+		<cut left="g" right="y" probability="0.17"/>
+		<cut left="g" right="f" probability="0.09"/>
+		<cut left="g" right="w" probability="0.17"/>
+		<cut left="g" right="i" probability="0.09"/>
+		<cut left="g" right="m" probability="0.11"/>
+		<cut left="g" right="v" probability="0"/> <!-- probability 0 -->
+		<cut left="g" right="l" probability="0.13"/>
+		<cut left="g" right="c" probability="0.12"/>
+		<cut left="g" right="a" probability="0.04"/>
+		<cut left="g" right="e" probability="0"/> <!-- probability 0 -->
+		<cut left="g" right="d" probability="0.04"/>
+		<cut left="g" right="r" probability="0.03"/>
+		<cut left="g" right="n" probability="0"/> <!-- probability 0 -->
+		<cut left="g" right="s" probability="0"/> <!-- probability 0 -->
+		<cut left="g" right="t" probability="0.02"/>
+		<cut left="g" right="h" probability="0"/> <!-- probability 0 -->
+		<cut left="g" right="k" probability="0.02"/>
+		<cut left="g" right="q" probability="0."/> <!-- probability 0 -->
+		<cut left="g" right="p" probability="0."/> <!-- probability 0 -->
+		<cut left="g" right="g" probability="0."/> <!-- probability 0 -->
+
+		<!-- v on the left -->
+		<cut left="v" right="y" probability="0.11"/>
+		<cut left="v" right="f" probability="0.08"/>
+		<cut left="v" right="w" probability="0.24"/>
+		<cut left="v" right="i" probability="0.09"/>
+		<cut left="v" right="m" probability="0.06"/>
+		<cut left="v" right="v" probability="0.04"/>
+		<cut left="v" right="l" probability="0.07"/>
+		<cut left="v" right="c" probability="0"/> <!-- probability 0 -->
+		<cut left="v" right="a" probability="0.03"/>
+		<cut left="v" right="e" probability="0.04"/>
+		<cut left="v" right="d" probability="0"/> <!-- probability 0 -->
+		<cut left="v" right="r" probability="0"/> <!-- probability 0 -->
+		<cut left="v" right="n" probability="0"/> <!-- probability 0 -->
+		<cut left="v" right="s" probability="0.03"/>
+		<cut left="v" right="t" probability="0"/> <!-- probability 0 -->
+		<cut left="v" right="h" probability="0"/> <!-- probability 0 -->
+		<cut left="v" right="k" probability="0"/> <!-- probability 0 -->
+		<cut left="v" right="q" probability="0"/> <!-- probability 0 -->
+		<cut left="v" right="p" probability="0.11"/>
+		<cut left="v" right="g" probability="0"/> <!-- probability 0 -->
+
+		<!-- i on the left -->
+		<cut left="i" right="y" probability="0.07"/>
+		<cut left="i" right="f" probability="0.08"/>
+		<cut left="i" right="w" probability="0.30"/>
+		<cut left="i" right="i" probability="0"/> <!-- probability 0 -->
+		<cut left="i" right="m" probability="0"/> <!-- probability 0 -->
+		<cut left="i" right="v" probability="0.02"/>
+		<cut left="i" right="l" probability="0.01"/>
+		<cut left="i" right="c" probability="0.18"/>
+		<cut left="i" right="a" probability="0.02"/>
+		<cut left="i" right="e" probability="0.06"/>
+		<cut left="i" right="d" probability="0"/> <!-- probability 0 -->
+		<cut left="i" right="r" probability="0"/> <!-- probability 0 -->
+		<cut left="i" right="n" probability="0"/> <!-- probability 0 -->
+		<cut left="i" right="s" probability="0"/> <!-- probability 0 -->
+		<cut left="i" right="t" probability="0"/> <!-- probability 0 -->
+		<cut left="i" right="h" probability="0"/> <!-- probability 0 -->
+		<cut left="i" right="k" probability="0.02"/>
+		<cut left="i" right="q" probability="0"/> <!-- probability 0 -->
+		<cut left="i" right="p" probability="0.02"/>
+		<cut left="i" right="g" probability="0"/> <!-- probability 0 -->
+
+		<!-- k on the left -->
+		<cut left="k" right="y" probability="0"/> <!-- probability 0 -->
+		<cut left="k" right="f" probability="0"/> <!-- probability 0 -->
+		<cut left="k" right="w" probability="0"/> <!-- probability 0 -->
+		<cut left="k" right="i" probability="0.02"/>
+		<cut left="k" right="m" probability="0"/> <!-- probability 0 -->
+		<cut left="k" right="v" probability="0"/> <!-- probability 0 -->
+		<cut left="k" right="l" probability="0"/> <!-- probability 0 -->
+		<cut left="k" right="c" probability="0"/> <!-- probability 0 -->
+		<cut left="k" right="a" probability="0"/> <!-- probability 0 -->
+		<cut left="k" right="e" probability="0"/> <!-- probability 0 -->
+		<cut left="k" right="d" probability="0"/> <!-- probability 0 -->
+		<cut left="k" right="r" probability="0"/> <!-- probability 0 -->
+		<cut left="k" right="n" probability="0"/> <!-- probability 0 -->
+		<cut left="k" right="s" probability="0"/> <!-- probability 0 -->
+		<cut left="k" right="t" probability="0"/> <!-- probability 0 -->
+		<cut left="k" right="h" probability="0"/> <!-- probability 0 -->
+		<cut left="k" right="k" probability="0"/> <!-- probability 0 -->
+		<cut left="k" right="q" probability="0"/> <!-- probability 0 -->
+		<cut left="k" right="p" probability="0"/> <!-- probability 0 -->
+		<cut left="k" right="g" probability="0.02"/>
+
+		<!-- h on the left -->
+		<cut left="h" right="y" probability="0"/> <!-- probability 0 -->
+		<cut left="h" right="f" probability="0"/> <!-- probability 0 -->
+		<cut left="h" right="w" probability="0"/> <!-- probability 0 -->
+		<cut left="h" right="i" probability="0"/> <!-- probability 0 -->
+		<cut left="h" right="m" probability="0"/> <!-- probability 0 -->
+		<cut left="h" right="v" probability="0"/> <!-- probability 0 -->
+		<cut left="h" right="l" probability="0"/> <!-- probability 0 -->
+		<cut left="h" right="c" probability="0"/> <!-- probability 0 -->
+		<cut left="h" right="a" probability="0"/> <!-- probability 0 -->
+		<cut left="h" right="e" probability="0"/> <!-- probability 0 -->
+		<cut left="h" right="d" probability="0"/> <!-- probability 0 -->
+		<cut left="h" right="r" probability="0"/> <!-- probability 0 -->
+		<cut left="h" right="n" probability="0"/> <!-- probability 0 -->
+		<cut left="h" right="s" probability="0"/> <!-- probability 0 -->
+		<cut left="h" right="t" probability="0"/> <!-- probability 0 -->
+		<cut left="h" right="h" probability="0"/> <!-- probability 0 -->
+		<cut left="h" right="k" probability="0"/> <!-- probability 0 -->
+		<cut left="h" right="q" probability="0"/> <!-- probability 0 -->
+		<cut left="h" right="p" probability="0.05"/>
+		<cut left="h" right="g" probability="0"/> <!-- probability 0 -->
+
+		<!-- r on the left -->
+		<cut left="r" right="y" probability="0"/> <!-- probability 0 -->
+		<cut left="r" right="f" probability="0"/> <!-- probability 0 -->
+		<cut left="r" right="w" probability="0"/> <!-- probability 0 -->
+		<cut left="r" right="i" probability="0"/> <!-- probability 0 -->
+		<cut left="r" right="m" probability="0"/> <!-- probability 0 -->
+		<cut left="r" right="v" probability="0"/> <!-- probability 0 -->
+		<cut left="r" right="l" probability="0"/> <!-- probability 0 -->
+		<cut left="r" right="c" probability="0"/> <!-- probability 0 -->
+		<cut left="r" right="a" probability="0"/> <!-- probability 0 -->
+		<cut left="r" right="e" probability="0"/> <!-- probability 0 -->
+		<cut left="r" right="d" probability="0"/> <!-- probability 0 -->
+		<cut left="r" right="r" probability="0"/> <!-- probability 0 -->
+		<cut left="r" right="n" probability="0"/> <!-- probability 0 -->
+		<cut left="r" right="s" probability="0"/> <!-- probability 0 -->
+		<cut left="r" right="t" probability="0"/> <!-- probability 0 -->
+		<cut left="r" right="h" probability="0"/> <!-- probability 0 -->
+		<cut left="r" right="k" probability="0"/> <!-- probability 0 -->
+		<cut left="r" right="q" probability="0"/> <!-- probability 0 -->
+		<cut left="r" right="p" probability="0"/> <!-- probability 0 -->
+		<cut left="r" right="g" probability="0"/> <!-- probability 0 -->
+
+		<!-- p on the left -->
+		<cut left="p" right="y" probability="0"/> <!-- probability 0 -->
+		<cut left="p" right="f" probability="0"/> <!-- probability 0 -->
+		<cut left="p" right="w" probability="0"/> <!-- probability 0 -->
+		<cut left="p" right="i" probability="0"/> <!-- probability 0 -->
+		<cut left="p" right="m" probability="0"/> <!-- probability 0 -->
+		<cut left="p" right="v" probability="0"/> <!-- probability 0 -->
+		<cut left="p" right="l" probability="0"/> <!-- probability 0 -->
+		<cut left="p" right="c" probability="0"/> <!-- probability 0 -->
+		<cut left="p" right="a" probability="0"/> <!-- probability 0 -->
+		<cut left="p" right="e" probability="0"/> <!-- probability 0 -->
+		<cut left="p" right="d" probability="0"/> <!-- probability 0 -->
+		<cut left="p" right="r" probability="0"/> <!-- probability 0 -->
+		<cut left="p" right="n" probability="0"/> <!-- probability 0 -->
+		<cut left="p" right="s" probability="0"/> <!-- probability 0 -->
+		<cut left="p" right="t" probability="0"/> <!-- probability 0 -->
+		<cut left="p" right="h" probability="0"/> <!-- probability 0 -->
+		<cut left="p" right="k" probability="0"/> <!-- probability 0 -->
+		<cut left="p" right="q" probability="0"/> <!-- probability 0 -->
+		<cut left="p" right="p" probability="0"/> <!-- probability 0 -->
+		<cut left="p" right="g" probability="0"/> <!-- probability 0 -->
+
+	</cuts>
+	
+	<!-- 
+		these represent the alteration of the standard probabilities, coming from Hamuro et al, 2008, Table 2 
+		we only add information for positions 2,3,4 (to the left and right)
+	-->
+	<alterations>
+		<!-- amminoacid "f" -->
+		<alteration aminoacid="f" side="left" position="2" probability="0.068"/>
+		<alteration aminoacid="f" side="left" position="3" probability="0.065"/>
+		<alteration aminoacid="f" side="left" position="4" probability="0.178"/>
+		<alteration aminoacid="f" side="right" position="2" probability="0.076"/>
+		<alteration aminoacid="f" side="right" position="3" probability="0.138"/>
+		<alteration aminoacid="f" side="right" position="4" probability="0.138"/>
+		
+		<!-- amminoacid "l" -->
+		<alteration aminoacid="l" side="left" position="2" probability="0.111"/>
+		<alteration aminoacid="l" side="left" position="3" probability="0.153"/>
+		<alteration aminoacid="l" side="left" position="4" probability="0.120"/>
+		<alteration aminoacid="l" side="right" position="2" probability="0.109"/>
+		<alteration aminoacid="l" side="right" position="3" probability="0.173"/>
+		<alteration aminoacid="l" side="right" position="4" probability="0.147"/>
+		
+		<!-- amminoacid "m" -->
+		<alteration aminoacid="m" side="left" position="2" probability="0.122"/>
+		<alteration aminoacid="m" side="left" position="3" probability="0.213"/>
+		<alteration aminoacid="m" side="left" position="4" probability="0.127"/>
+		<alteration aminoacid="m" side="right" position="2" probability="0.122"/>
+		<alteration aminoacid="m" side="right" position="3" probability="0.198"/>
+		<alteration aminoacid="m" side="right" position="4" probability="0.141"/>
+		
+		<!-- amminoacid "c" -->
+		<alteration aminoacid="c" side="left" position="2" probability="0.201"/>
+		<alteration aminoacid="c" side="left" position="3" probability="0.207"/>
+		<alteration aminoacid="c" side="left" position="4" probability="0.108"/>
+		<alteration aminoacid="c" side="right" position="2" probability="0.121"/>
+		<alteration aminoacid="c" side="right" position="3" probability="0.131"/>
+		<alteration aminoacid="c" side="right" position="4" probability="0.165"/>
+		
+		<!-- amminoacid "e" -->
+		<alteration aminoacid="e" side="left" position="2" probability="0.191"/>
+		<alteration aminoacid="e" side="left" position="3" probability="0.147"/>
+		<alteration aminoacid="e" side="left" position="4" probability="0.127"/>
+		<alteration aminoacid="e" side="right" position="2" probability="0.179"/>
+		<alteration aminoacid="e" side="right" position="3" probability="0.149"/>
+		<alteration aminoacid="e" side="right" position="4" probability="0.112"/>
+		
+		<!-- amminoacid "w" -->
+		<alteration aminoacid="w" side="left" position="2" probability="0.051"/>
+		<alteration aminoacid="w" side="left" position="3" probability="0.092"/>
+		<alteration aminoacid="w" side="left" position="4" probability="0.158"/>
+		<alteration aminoacid="w" side="right" position="2" probability="0.116"/>
+		<alteration aminoacid="w" side="right" position="3" probability="0.152"/>
+		<alteration aminoacid="w" side="right" position="4" probability="0.152"/>
+		
+		<!-- amminoacid "y" -->
+		<alteration aminoacid="y" side="left" position="2" probability="0.086"/>
+		<alteration aminoacid="y" side="left" position="3" probability="0.071"/>
+		<alteration aminoacid="y" side="left" position="4" probability="0.178"/>
+		<alteration aminoacid="y" side="right" position="2" probability="0.137"/>
+		<alteration aminoacid="y" side="right" position="3" probability="0.131"/>
+		<alteration aminoacid="y" side="right" position="4" probability="0.157"/>
+		
+		<!-- amminoacid "d" -->
+		<alteration aminoacid="d" side="left" position="2" probability="0.175"/>
+		<alteration aminoacid="d" side="left" position="3" probability="0.123"/>
+		<alteration aminoacid="d" side="left" position="4" probability="0.167"/>
+		<alteration aminoacid="d" side="right" position="2" probability="0.118"/>
+		<alteration aminoacid="d" side="right" position="3" probability="0.117"/>
+		<alteration aminoacid="d" side="right" position="4" probability="0.131"/>
+		
+		<!-- amminoacid "a" -->
+		<alteration aminoacid="a" side="left" position="2" probability="0.166"/>
+		<alteration aminoacid="a" side="left" position="3" probability="0.195"/>
+		<alteration aminoacid="a" side="left" position="4" probability="0.118"/>
+		<alteration aminoacid="a" side="right" position="2" probability="0.175"/>
+		<alteration aminoacid="a" side="right" position="3" probability="0.100"/>
+		<alteration aminoacid="a" side="right" position="4" probability="0.116"/>
+		
+		<!-- amminoacid "q" -->
+		<alteration aminoacid="q" side="left" position="2" probability="0.154"/>
+		<alteration aminoacid="q" side="left" position="3" probability="0.121"/>
+		<alteration aminoacid="q" side="left" position="4" probability="0.118"/>
+		<alteration aminoacid="q" side="right" position="2" probability="0.127"/>
+		<alteration aminoacid="q" side="right" position="3" probability="0.146"/>
+		<alteration aminoacid="q" side="right" position="4" probability="0.129"/>
+		
+		<!-- amminoacid "n" -->
+		<alteration aminoacid="n" side="left" position="2" probability="0.217"/>
+		<alteration aminoacid="n" side="left" position="3" probability="0.099"/>
+		<alteration aminoacid="n" side="left" position="4" probability="0.142"/>
+		<alteration aminoacid="n" side="right" position="2" probability="0.085"/>
+		<alteration aminoacid="n" side="right" position="3" probability="0.115"/>
+		<alteration aminoacid="n" side="right" position="4" probability="0.143"/>
+		
+		<!-- amminoacid "t" -->
+		<alteration aminoacid="t" side="left" position="2" probability="0.142"/>
+		<alteration aminoacid="t" side="left" position="3" probability="0.189"/>
+		<alteration aminoacid="t" side="left" position="4" probability="0.146"/>
+		<alteration aminoacid="t" side="right" position="2" probability="0.156"/>
+		<alteration aminoacid="t" side="right" position="3" probability="0.145"/>
+		<alteration aminoacid="t" side="right" position="4" probability="0.110"/>
+		
+		<!-- amminoacid "s" -->
+		<alteration aminoacid="s" side="left" position="2" probability="0.184"/>
+		<alteration aminoacid="s" side="left" position="3" probability="0.195"/>
+		<alteration aminoacid="s" side="left" position="4" probability="0.114"/>
+		<alteration aminoacid="s" side="right" position="2" probability="0.176"/>
+		<alteration aminoacid="s" side="right" position="3" probability="0.125"/>
+		<alteration aminoacid="s" side="right" position="4" probability="0.135"/>
+		
+		<!-- amminoacid "g" -->
+		<alteration aminoacid="g" side="left" position="2" probability="0.094"/>
+		<alteration aminoacid="g" side="left" position="3" probability="0.191"/>
+		<alteration aminoacid="g" side="left" position="4" probability="0.131"/>
+		<alteration aminoacid="g" side="right" position="2" probability="0.082"/>
+		<alteration aminoacid="g" side="right" position="3" probability="0.073"/>
+		<alteration aminoacid="g" side="right" position="4" probability="0.151"/>
+		
+		<!-- amminoacid "v" -->
+		<alteration aminoacid="v" side="left" position="2" probability="0.181"/>
+		<alteration aminoacid="v" side="left" position="3" probability="0.177"/>
+		<alteration aminoacid="v" side="left" position="4" probability="0.130"/>
+		<alteration aminoacid="v" side="right" position="2" probability="0.221"/>
+		<alteration aminoacid="v" side="right" position="3" probability="0.174"/>
+		<alteration aminoacid="v" side="right" position="4" probability="0.120"/>
+		
+		<!-- amminoacid "i" -->
+		<alteration aminoacid="i" side="left" position="2" probability="0.172"/>
+		<alteration aminoacid="i" side="left" position="3" probability="0.190"/>
+		<alteration aminoacid="i" side="left" position="4" probability="0.132"/>
+		<alteration aminoacid="i" side="right" position="2" probability="0.183"/>
+		<alteration aminoacid="i" side="right" position="3" probability="0.202"/>
+		<alteration aminoacid="i" side="right" position="4" probability="0.128"/>
+		
+		<!-- amminoacid "k" -->
+		<alteration aminoacid="k" side="left" position="2" probability="0.110"/>
+		<alteration aminoacid="k" side="left" position="3" probability="0.016"/>
+		<alteration aminoacid="k" side="left" position="4" probability="0.127"/>
+		<alteration aminoacid="k" side="right" position="2" probability="0.143"/>
+		<alteration aminoacid="k" side="right" position="3" probability="0.170"/>
+		<alteration aminoacid="k" side="right" position="4" probability="0.127"/>
+		
+		<!-- amminoacid "h" -->
+		<alteration aminoacid="h" side="left" position="2" probability="0.077"/>
+		<alteration aminoacid="h" side="left" position="3" probability="0.017"/>
+		<alteration aminoacid="h" side="left" position="4" probability="0.117"/>
+		<alteration aminoacid="h" side="right" position="2" probability="0.026"/>
+		<alteration aminoacid="h" side="right" position="3" probability="0.091"/>
+		<alteration aminoacid="h" side="right" position="4" probability="0.115"/>
+		
+		<!-- amminoacid "r" -->
+		<alteration aminoacid="r" side="left" position="2" probability="0.133"/>
+		<alteration aminoacid="r" side="left" position="3" probability="0.012"/>
+		<alteration aminoacid="r" side="left" position="4" probability="0.133"/>
+		<alteration aminoacid="r" side="right" position="2" probability="0.211"/>
+		<alteration aminoacid="r" side="right" position="3" probability="0.153"/>
+		<alteration aminoacid="r" side="right" position="4" probability="0.139"/>
+		
+		<!-- amminoacid "p" -->
+		<alteration aminoacid="p" side="left" position="2" probability="0.002"/>
+		<alteration aminoacid="p" side="left" position="3" probability="0.137"/>
+		<alteration aminoacid="p" side="left" position="4" probability="0.194"/>
+		<alteration aminoacid="p" side="right" position="2" probability="0.013"/>
+		<alteration aminoacid="p" side="right" position="3" probability="0.027"/>
+		<alteration aminoacid="p" side="right" position="4" probability="0.207"/>
+		
+		<!-- being at the beginning or at the end of a chain can change the probability of cutting; data taken from Powers et al, 1977 -->
+		<terminal side="left" position="2" multiplier="0.3333"/>
+		<terminal side="left" position="3" multiplier="0.3333"/>
+		<terminal side="right" position="2" multiplier="0.3333"/>
+		<terminal side="right" position="3" multiplier="0.3333"/>
+		
+	</alterations>
+	
+	
+</configuration>
