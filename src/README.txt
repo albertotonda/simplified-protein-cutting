@@ -19,6 +19,8 @@ For more information, refer to: Tonda, Alberto and Grosvenor, Anita J and Cleren
 In order to parse JSON configuration files, the nlohmann/json library is vendored (as a single header) in src/thirdparty/nlohmann/. We did not write it, this excellent library is authored by Niels Lohmann; for more information, see https://github.com/nlohmann/json
 (Until 2026, configuration files were XML, parsed with the tinyxml library; the format was switched to JSON, see below.)
 
+Logging is handled by spdlog, also vendored (header-only) in src/thirdparty/spdlog/, authored by Gabi Melman; see https://github.com/gabime/spdlog
+
 Compiling instructions for Linux
 --------------------------------
 Install CMAKE (under Ubuntu, 'sudo apt-get install cmake'). 
@@ -35,7 +37,7 @@ THE SIMULATION WILL TAKE SOME TIME TO COMPLETE (probably minutes to tens of minu
 
 In the end, the program will produce a file called 'statistics.csv', that marks the quantity of each peptide during 'time'. On the columns, you have 'time' (number of iterations until that moment), 'time2' (number of cuts so far), 'pepsin' (it's always 1.0, but it's there for future developments), then all peptides produced during the simulations, in alphabetical order. In each row, there's the number of each type of peptide for that iteration. The resulting file is usually large (~73 MB for the example), and you should probably write another script to extract the meaningful information from it (analyzing it manually would take a long time).
 
-The program has a lot of output that is used mainly for debugging purposes (yes, I am guilty of 'printf debugging'), but the good news is that the output to screen can be used to understand what it is doing at each iteration.
+By default, the program only prints progress/warning/error messages to the console. Pass '--verbose' for a debug-level trace on the console, or '--log-file <path>' to additionally write a full trace-level debug log to a file (nothing is ever written to disk unless '--log-file' is explicitly given). '--log-level <trace|debug|info|warn|error|off>' sets the console level explicitly.
 
 Using the software for your work
 --------------------------------

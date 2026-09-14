@@ -42,9 +42,7 @@ public :
 	double pepsinDyingRatio;
 	unsigned int randomSeed;
 	unsigned int t;
-	
-	bool verbose;
-	
+
 	// constructor / destructor
 	PepsinModel();
 	~PepsinModel();

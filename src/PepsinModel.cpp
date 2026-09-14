@@ -19,6 +19,9 @@
 #include <nlohmann/json.hpp>
 using json = nlohmann::json;
 
+// leveled logging (replaces the old "verbose" bool and hardcoded "DEBUG" macro)
+#include <Log.h>
+
 // some defines, used mainly for the JSON parsing
 #define DEFAULT_CSV "statistics-"
 #define DEFAULT_OUTPUT "solution.xml"
@@ -51,9 +54,6 @@ using json = nlohmann::json;
 #define JSON_FIELD_RIGHT "right"
 #define JSON_FIELD_SEQUENCE "sequence"
 
-// debugging purposes
-#define DEBUG 1 // set to 1 to activate debugging
-
 // namespace
 using namespace std;
 
@@ -68,8 +68,7 @@ overallLength(0),
 pepsinAlwaysDying(false),
 pepsinDyingRatio(1.0),
 randomSeed(0),
-t(0),
-verbose(false)
+t(0)
 {}
 
 // destructor
@@ -86,12 +85,12 @@ PepsinModel::~PepsinModel()
 // read the XML file and store the relevant information 
 int PepsinModel::readJson( string fileName )
 {
-	if(verbose) cout << "Loading JSON file..." << endl;
+	LOG_DEBUG("Loading JSON file...");
 
 	ifstream inStream( fileName.c_str() );
 	if( !inStream.is_open() )
 	{
-		cerr << "Error: cannot open file \"" << fileName << "\". Aborting..." << endl;
+		LOG_ERROR("Error: cannot open file \"" << fileName << "\". Aborting...");
 		return -1;
 	}
 
@@ -104,7 +103,7 @@ int PepsinModel::readJson( string fileName )
 	}
 	catch( json::parse_error& e )
 	{
-		cerr << "Error: file \"" << fileName << "\" is not valid JSON (" << e.what() << "). Aborting..." << endl;
+		LOG_ERROR("Error: file \"" << fileName << "\" is not valid JSON (" << e.what() << "). Aborting...");
 		return -1;
 	}
 
@@ -146,14 +145,14 @@ int PepsinModel::readJson( string fileName )
 	if( randomSeed != 0 )
 	{
 		// initialize random generator with seed
-		if(verbose) cout << "Initializing random generator with seed " << randomSeed << endl;
+		LOG_DEBUG("Initializing random generator with seed " << randomSeed);
 		srand( randomSeed );
 	}
 	else
 	{
 		// initialize random generator with t
 		time_t timeRandomSeed = time(NULL);
-		if(verbose) cout << "Initializing random generator with time (" << timeRandomSeed << ")" << endl;
+		LOG_DEBUG("Initializing random generator with time (" << timeRandomSeed << ")");
 		srand( timeRandomSeed );
 	}
 
@@ -161,19 +160,19 @@ int PepsinModel::readJson( string fileName )
 	// include the possibility of having different proteins in the initial set
 	if( !root.contains(JSON_PROTEINS) )
 	{
-		cerr << "Error: field \"" << JSON_PROTEINS << "\" must be specified. Aborting..." << endl;
+		LOG_ERROR("Error: field \"" << JSON_PROTEINS << "\" must be specified. Aborting...");
 		return -1;
 	}
 
 	for( const json& protein : root[JSON_PROTEINS] )
 	{
-		if(verbose) cout	<< "Adding a protein..." << endl;
+		LOG_DEBUG("Adding a protein...");
 		string originalProtein = protein.value(JSON_FIELD_SEQUENCE, string(""));
 
 		// ok, here we get two possible fields: the name of the protein (unused) and the quantity (important!)
 		// recently, we added a third field, a list of disulfide bonds
-		if( protein.contains(JSON_FIELD_NAME) && verbose )
-			cout	<< "Adding protein \"" << protein[JSON_FIELD_NAME].get<string>() << "\"..." << endl;
+		if( protein.contains(JSON_FIELD_NAME) )
+			LOG_DEBUG("Adding protein \"" << protein[JSON_FIELD_NAME].get<string>() << "\"...");
 
 		// default quantity for each protein is 1
 		unsigned int proteinQuantity = protein.value(JSON_FIELD_QUANTITY, 1u);
@@ -181,9 +180,9 @@ int PepsinModel::readJson( string fileName )
 		// remove all whitespaces and other stuff from the string
 		originalProtein.erase( std::remove_if( originalProtein.begin(), originalProtein.end(), ::isspace ), originalProtein.end() );
 
-		if(verbose) cout 	<< "Adding protein with composition \"" << originalProtein
-					<< "\", " << originalProtein.length()
-					<< " amminoacids long."  << endl;
+		LOG_DEBUG(	"Adding protein with composition \"" << originalProtein
+				<< "\", " << originalProtein.length()
+				<< " amminoacids long." );
 
 		// create the Peptide with the original protein
 		Peptide originalProteinPeptide(originalProtein);
@@ -193,10 +192,9 @@ int PepsinModel::readJson( string fileName )
 		{
 			for( unsigned int bond : protein[JSON_FIELD_DISULFIDEBONDS] )
 			{
-				if(verbose) cout 	<< "Adding bond in position #" << bond
-							<< " to the protein (modified to #"
-							<< (bond-1) << " for C++ internal array indexing)"
-							<< endl;
+				LOG_TRACE(	"Adding bond in position #" << bond
+						<< " to the protein (modified to #"
+						<< (bond-1) << " for C++ internal array indexing)" );
 
 				originalProteinPeptide.addDisulfideBond( bond-1 );
 			}
@@ -204,7 +202,7 @@ int PepsinModel::readJson( string fileName )
 
 		for(unsigned int i = 0; i < proteinQuantity; i++)
 		{
-			if(verbose) cout << "\tAdding copy #" << (i+1) << "..." << endl;
+			LOG_TRACE("\tAdding copy #" << (i+1) << "...");
 			// add the protein to the initial set
 			this->originalProteins.push_back( originalProteinPeptide );
 
@@ -216,15 +214,15 @@ int PepsinModel::readJson( string fileName )
 	// check if there are proteins at all
 	if( originalProteins.size() == 0 )
 	{
-		cerr << "Error: no proteins found in \"" << JSON_PROTEINS << "\". Aborting..." << endl;
+		LOG_ERROR("Error: no proteins found in \"" << JSON_PROTEINS << "\". Aborting...");
 		return -1;
 	}
 
 	// then, take all the cuts: "cuts": { "<left>": { "<right>": probability, ... }, ... }
-	if(verbose) cout << "Reading the cuts..." << endl;
+	LOG_DEBUG("Reading the cuts...");
 	if( !root.contains(JSON_CUTS) )
 	{
-		cerr << "Error: field \"" << JSON_CUTS << "\" must be specified. Aborting..." << endl;
+		LOG_ERROR("Error: field \"" << JSON_CUTS << "\" must be specified. Aborting...");
 		return -1;
 	}
 
@@ -244,7 +242,7 @@ int PepsinModel::readJson( string fileName )
 				key += right;
 				this->cutProbability[ key ] = probability;
 
-				if(verbose) cout << "Cut \"" << key << "\" with probability=" << probability << " added" << endl;
+				LOG_TRACE("Cut \"" << key << "\" with probability=" << probability << " added");
 			}
 		}
 	}
@@ -252,18 +250,18 @@ int PepsinModel::readJson( string fileName )
 	// check if the map is empty, it could be a problem
 	if( cutProbability.size() == 0 )
 	{
-		cerr << "Warning: there are no cuts specified, so probably nothing will happen during this simulation..." << endl;
+		LOG_WARN("Warning: there are no cuts specified, so probably nothing will happen during this simulation...");
 	}
 	else
 	{
-		if(verbose) cout << "There are " << cutProbability.size() << " cuts specified" << endl;
+		LOG_DEBUG("There are " << cutProbability.size() << " cuts specified");
 	}
 
 	// proceed with managing the alterations
 	// alterations are optional, so if they're not there it's not a big deal
 	if( root.contains(JSON_ALTERATIONS) )
 	{
-		if(verbose) cout << "Now reading alterations..." << endl;
+		LOG_DEBUG("Now reading alterations...");
 
 		// "alterations": { "<aminoacid>": { "left": { "<position>": probability, ... }, "right": {...} }, ... }
 		for( auto& aminoacidEntry : root[JSON_ALTERATIONS].items() )
@@ -283,8 +281,8 @@ int PepsinModel::readJson( string fileName )
 
 					// store the alteration inside the map
 					this->alterations[ key ][ aminoacid ] = probability;
-					if(verbose) cout 	<< "- alteration[ " << key << " ][ " << aminoacid << " ] = "
-								<< this->alterations[key][aminoacid] << endl;
+					LOG_TRACE(	"- alteration[ " << key << " ][ " << aminoacid << " ] = "
+							<< this->alterations[key][aminoacid] );
 				}
 			}
 		}
@@ -292,7 +290,7 @@ int PepsinModel::readJson( string fileName )
 		// we also have a second type of alteration, called "terminal", to take into account
 		// the alteration of the probabilities of cutting, if you are at either end of a chain
 		// "terminalAlterations": { "left": { "<position>": multiplier, ... }, "right": {...} }
-		if(verbose) cout << "Now reading terminal alterations..." << endl;
+		LOG_DEBUG("Now reading terminal alterations...");
 		if( root.contains(JSON_TERMINALALTERATIONS) )
 		{
 			const json& terminalAlterationsJson = root[JSON_TERMINALALTERATIONS];
@@ -311,8 +309,7 @@ int PepsinModel::readJson( string fileName )
 
 					// store this alteration inside the map
 					this->terminalAlterations[ key ] = multiplier;
-					if(verbose) cout	<< "- terminal alteration[ " << key << " ] = "
-								<< this->terminalAlterations[key] << endl;
+					LOG_DEBUG("- terminal alteration[ " << key << " ] = " << this->terminalAlterations[key]);
 				}
 			}
 		}
@@ -338,15 +335,14 @@ int PepsinModel::readJson( string fileName )
 				std += value;
 			}
 			std /= it->second.size();
-			
-			if(verbose)	cout 	<< "For alterations on column \"" << it->first 
-						<< "\", avg=" << average 
-						<< ", std=" << std 
-						<< ", sigma=" << sqrt(std)
-						<< endl;
-			
+
+			LOG_DEBUG(	"For alterations on column \"" << it->first
+					<< "\", avg=" << average
+					<< ", std=" << std
+					<< ", sigma=" << sqrt(std) );
+
 			// remake the hash map, inserting only the values that will actually modify the probabilities;
-			// the alterations might be 
+			// the alterations might be
 			for( map<string, double>::iterator it2 = it->second.begin(); it2 != it->second.end(); it2++ )
 			{
 				double value = it2->second - average;
@@ -354,55 +350,51 @@ int PepsinModel::readJson( string fileName )
 
 				if( value > std )
 				{
-					if(verbose) cout 	<< "- alteration[ " << it->first << " ][ " 
-								<< it2->first << " ]=" << it2->second 
-								<< ", difference from average is " << (value / std ) << " variances!"
-								<< endl;
+					LOG_DEBUG(	"- alteration[ " << it->first << " ][ "
+							<< it2->first << " ]=" << it2->second
+							<< ", difference from average is " << (value / std ) << " variances!" );
 				}
-				
+
 				if( value > sqrt(std) )
 				{
-					if(verbose) cout 	<< "- alteration[ " << it->first << " ][ " 
-								<< it2->first << " ]=" << it2->second 
-								<< ", difference from average is " << (value / sqrt(std) ) << " standard deviations!"
-								<< endl;
+					LOG_DEBUG(	"- alteration[ " << it->first << " ][ "
+							<< it2->first << " ]=" << it2->second
+							<< ", difference from average is " << (value / sqrt(std) ) << " standard deviations!" );
 				}
-				
+
 				it2->second /= average;
 			}
 		}
-		
-		
+
+
 		// this is just debugging / pre-processing, and it should probably be removed; but it is interesting
 		// to understand how the cut probabilities are changed by the alterations: so we iterate over the
 		// proteins and check the difference with the proposed approach
-		if(verbose)
+		if( logging::get()->should_log(spdlog::level::trace) )
 		for(unsigned int p = 0; p < 1 /* originalProteins.size() */; p++)
 		{
-			cout << "Analyzing the influence of alterations for protein \"" << originalProteins[p] << "\"..." << endl;
+			LOG_TRACE("Analyzing the influence of alterations for protein \"" << originalProteins[p] << "\"...");
 			for(int i = 0; i < originalProteins[p].length(); i++)
 			{
 				// check the cut probability for a couple of amminoacids
-				string key = ""; 
+				string key = "";
 				key += originalProteins[p][i];
 				key += "\t";
 
 				if( i + 1 < originalProteins[p].length() )
 					key += originalProteins[p][i+1];
-				
+
 				// verify if there is a corresponding entry in the hash table
 				map<string,double>::iterator it = cutProbability.find( key );
 				if( it != cutProbability.end() )
 				{
 					double probability = it->second;
-					cout << "- \"" << key << "\": original cut probability = " << probability << endl;
-					
-					probability = this->computeCutProbability( key, &originalProteins[p], i );
-					cout << "- \"" << key << "\": altered cut probability = " << probability << endl;
+					LOG_TRACE("- \"" << key << "\": original cut probability = " << probability);
 
-					cout << endl; // for readability
+					probability = this->computeCutProbability( key, &originalProteins[p], i );
+					LOG_TRACE("- \"" << key << "\": altered cut probability = " << probability << "\n");
 				}
-				
+
 			}
 		}
 		
@@ -417,7 +409,7 @@ int PepsinModel::readJson( string fileName )
 // write the history to a file
 int PepsinModel::writeLog( string fileName )
 {
-	if(this->verbose) cout << endl << "Pre-processing statistics..." << endl;
+	LOG_INFO("Pre-processing statistics...");
 
 	// trying to put some buffering, in order not to block the file for too long
 	stringstream outStream;
@@ -497,15 +489,13 @@ int PepsinModel::writeLog( string fileName )
 		}
 	}
 
-	if( this->verbose ) cout 	<< "Writing statistics to CSV file \"" 
-					<< fileName << "\"..." 
-					<< endl;
+	LOG_INFO("Writing statistics to CSV file \"" << fileName << "\"...");
 	// open file
 	ofstream csvOut( fileName.c_str() );
 	if( !csvOut.is_open() )
 	{
-		cerr << "Error: cannot write on file \"" << fileName << "\". Aborting..." << endl;
-		return -1; 
+		LOG_ERROR("Error: cannot write on file \"" << fileName << "\". Aborting...");
+		return -1;
 	}
 	
 	csvOut << outStream.str();
@@ -519,14 +509,12 @@ int PepsinModel::writeLog( string fileName )
 // after initialization, here is the "true" run of the model!
 void PepsinModel::run()
 {
-	cout 	<< "Starting the simulation, with maxTime=" << maxTime
-
-		<< ", maxAttemptsPerTime=" << maxAttemptsPerTime
-		<< ", maxAttempts=" << maxAttempts
-		<< ", maxDH=" << maxDH
-		<< ", initialPepsin=" << currentPepsin
-		<< ", pepsinDyingRatio=" << pepsinDyingRatio
-		<< endl;
+	LOG_INFO(	"Starting the simulation, with maxTime=" << maxTime
+			<< ", maxAttemptsPerTime=" << maxAttemptsPerTime
+			<< ", maxAttempts=" << maxAttempts
+			<< ", maxDH=" << maxDH
+			<< ", initialPepsin=" << currentPepsin
+			<< ", pepsinDyingRatio=" << pepsinDyingRatio );
 
 	// initialize some values
 	unsigned int time2 = 0; // this variable is increased only when there is a cut
@@ -562,7 +550,7 @@ void PepsinModel::run()
 	}
 	
 	// some debugging
-	if( verbose ) cout << "The total number of sites that the pepsin can cut is " << dhTotalSites << endl;
+	LOG_DEBUG("The total number of sites that the pepsin can cut is " << dhTotalSites);
 	
 	// also, take note of pepsin quantity and time2
 	this->pepsinHistory.push_back( currentPepsin );
@@ -571,12 +559,11 @@ void PepsinModel::run()
 	// start!
 	while( this->t < this->maxTime && attempts < this->maxAttempts && (time2/(double)dhTotalSites) < this->maxDH )
 	{
-		cout 	<< endl 
-			<< "Time #" << t 
-			<< " (Time2 #" << time2 
-			<< ", DH=" << (time2/(double)dhTotalSites) 
-			<< ", maxDH=" << this->maxDH
-			<< ")" <<  endl;
+		LOG_DEBUG(	"Time #" << t
+				<< " (Time2 #" << time2
+				<< ", DH=" << (time2/(double)dhTotalSites)
+				<< ", maxDH=" << this->maxDH
+				<< ")" );
 		
 		// some variables need to be defined here
 		bool cutPerformed = false;
@@ -618,10 +605,9 @@ void PepsinModel::run()
 			}
 			unsigned int startingProtein = proteinsIndex;
 			
-			if(verbose) cout 	<< "Starting position is " << startingPosition 
-						<< " in protein #" << startingProtein 
-						<< " (\"" << currentProteins[startingProtein] << "\")"
-						<< endl;
+			LOG_DEBUG(	"Starting position is " << startingPosition
+					<< " in protein #" << startingProtein
+					<< " (\"" << currentProteins[startingProtein] << "\")" );
 
 			// TODO check for errors, but it should be unlikely...
 			
@@ -638,8 +624,8 @@ void PepsinModel::run()
 				if( currentPosition + 1 < currentProteins[proteinsIndex].length() )
 					key += currentProteins[proteinsIndex][currentPosition+1];
 				
-				if(verbose) cout 	<< "- Analyzing protein[" << proteinsIndex << "][" << currentPosition 
-							<< "]=\"" << key << "\"..." << endl;
+				LOG_TRACE(	"- Analyzing protein[" << proteinsIndex << "][" << currentPosition
+						<< "]=\"" << key << "\"..." );
 
 				// obtain the probability of cutting in that point
 				double probability = this->computeCutProbability( key, &currentProteins[proteinsIndex], currentPosition );
@@ -652,23 +638,21 @@ void PepsinModel::run()
 					if( randomNumber < probability )
 					{
 						// perform the cut!
-						if(verbose) cout	<< "Performing cut \"" << key << "\" in position " 
-									<< currentPosition << " that had probability " 
-									<< cutProbability[key] 
-									<< " (modified to " << probability 
-									<< ", randomNumber was " << randomNumber << ")"
-									<< endl;
+						LOG_DEBUG(	"Performing cut \"" << key << "\" in position "
+								<< currentPosition << " that had probability "
+								<< cutProbability[key]
+								<< " (modified to " << probability
+								<< ", randomNumber was " << randomNumber << ")" );
 						
 						// now, the current proteins will change! add the resulting sub-proteins
 						// at the end of the vector, and remove the current protein
 						product1 = currentProteins[proteinsIndex].substr(0, currentPosition+1);
 						product2 = currentProteins[proteinsIndex].substr(currentPosition+1);
 						
-						if(verbose) cout 	<< "Protein \"" << currentProteins[proteinsIndex] 
-									<< "\" has been cut in position " << currentPosition
-									<< " and the two resulting products are \"" << product1
-									<< "\" and \"" << product2 << "\""
-									<< endl;
+						LOG_DEBUG(	"Protein \"" << currentProteins[proteinsIndex]
+								<< "\" has been cut in position " << currentPosition
+								<< " and the two resulting products are \"" << product1
+								<< "\" and \"" << product2 << "\"" );
 
 						// remove parent protein, but keep its structure for the statistics
 						parentProtein = currentProteins[proteinsIndex];
@@ -687,16 +671,15 @@ void PepsinModel::run()
 					}
 					else
 					{
-						if(verbose) cout 	<< "Probability was " << probability
-									<< ", while randomNumber was " << randomNumber
-									<< ": cut not performed."
-									<< endl;
+						LOG_TRACE(	"Probability was " << probability
+								<< ", while randomNumber was " << randomNumber
+								<< ": cut not performed." );
 					}
-					
+
 				}
 				else
 				{
-					if(verbose) cout 	<< "Probability to cut = 0.0; there are no cuts for this key, or there's a disulfide bond near the target link." << endl;
+					LOG_TRACE("Probability to cut = 0.0; there are no cuts for this key, or there's a disulfide bond near the target link.");
 				}
 				// if there is no cut available for the two letters, skip to the next position
 				currentPosition++;
@@ -710,18 +693,16 @@ void PepsinModel::run()
 					if( proteinsIndex >= currentProteins.size() )
 					{
 						proteinsIndex = 0;
-						if(verbose) cout 	<< "Going over the list of proteins again: attemptsPerTime=" 
-									<< attemptsPerTime << ", attempts=" << attempts	
-									<< ", startingPosition=" << startingPosition
-									<< ", startingProtein=" << startingProtein
-									<< endl;
+						LOG_DEBUG(	"Going over the list of proteins again: attemptsPerTime="
+								<< attemptsPerTime << ", attempts=" << attempts
+								<< ", startingPosition=" << startingPosition
+								<< ", startingProtein=" << startingProtein );
 					}
-					
+
 
 					currentPosition = 0;
-					if(verbose) cout 	<< "- Now analyzing protein #" << proteinsIndex 
-								<< " (size " << currentProteins[proteinsIndex].length() << ")"
-								<< endl;
+					LOG_TRACE(	"- Now analyzing protein #" << proteinsIndex
+							<< " (size " << currentProteins[proteinsIndex].length() << ")" );
 				}
 
 				// if we came back where we started...
@@ -739,7 +720,7 @@ void PepsinModel::run()
 				{
 					attempts++;
 					failedAttempts++;
-					if(verbose) cout << "!!! Failed cut attempt #" << failedAttempts << " !!!" << endl;
+					LOG_TRACE("!!! Failed cut attempt #" << failedAttempts << " !!!");
 				}
 				*/
 			}
@@ -747,7 +728,7 @@ void PepsinModel::run()
 		else
 		{
 			// the pepsin did not activate
-			cout << "Pepsin did not activate." << endl;
+			LOG_DEBUG("Pepsin did not activate.");
 		}
 	
 		// if we are working with the idea that pepsin dies out with time, do it!
@@ -819,10 +800,9 @@ void PepsinModel::run()
 //double PepsinModel::computeCutProbability( string key, string* protein, unsigned int position )
 double PepsinModel::computeCutProbability( string key, Peptide* protein, unsigned int position )
 {
-	if(DEBUG) cout 	<< "Now computing probability for key=\"" << key 
+	LOG_TRACE(	"Now computing probability for key=\"" << key
 			<< "\", protein=" << *protein
-			<< ", position=" << position 
-			<< endl;
+			<< ", position=" << position );
 	
 	// NOTE: for the index corrections in this function, you have to take into account that
 	//	 "position" actually refers to P1, in classic literature; so
@@ -836,9 +816,8 @@ double PepsinModel::computeCutProbability( string key, Peptide* protein, unsigne
 	// first thing, check whether there is a disulfide bond (or similar) in the target position
 	if( protein->isCuttable( position, position+1 ) == false )
 	{
-		if(verbose) cout 	<< "Position #" << position 
-					<< " cannot be cut, due to the presence of a disulfide bond."
-					<< endl;
+		LOG_TRACE(	"Position #" << position
+				<< " cannot be cut, due to the presence of a disulfide bond." );
 		return probability;
 	}
 
@@ -853,23 +832,21 @@ double PepsinModel::computeCutProbability( string key, Peptide* protein, unsigne
 
 		if( alterations.size() > 0 )
 		{
-			if(DEBUG) cout << "- Evaluating alterations on the left..." << endl;
+			LOG_TRACE("- Evaluating alterations on the left...");
 			// first, alterations on the left
 			for(int left = 2; left <= 4 && (int)(position - left+1) >= 0; left++)
 			{
-				if(DEBUG) cout 	<< "- Now evaluating position " << (position - left+1) 
-						<< " on protein \"" << *protein << "\""
-						<< endl;
+				LOG_TRACE(	"- Now evaluating position " << (position - left+1)
+						<< " on protein \"" << *protein << "\"" );
 
 				string aminoacid = "";
 				aminoacid += (*protein)[position-left+1];
 				string key = "-";
 				key += left + 48; // 48 is the ascii code for '0'
-				
+
 				// are there alterations for that column?
-				if(DEBUG) cout 	<< "- Looking for alterations on column \"" << key 
-						<< "\" for aminoacid \"" << aminoacid << "\""
-						<< endl;
+				LOG_TRACE(	"- Looking for alterations on column \"" << key
+						<< "\" for aminoacid \"" << aminoacid << "\"" );
 				map< string, map<string, double> >::iterator it2 = this->alterations.find( key );
 				if( it2 != this->alterations.end() )
 				{
@@ -880,7 +857,7 @@ double PepsinModel::computeCutProbability( string key, Peptide* protein, unsigne
 			}
 
 			// then, alterations on the right
-			if(DEBUG) cout << "- Evaluating alterations on the right..." << endl;
+			LOG_TRACE("- Evaluating alterations on the right...");
 			for(unsigned int right = 2; right <= 4 && 
 				(position + right) < protein->length(); right++)
 			{
@@ -901,7 +878,7 @@ double PepsinModel::computeCutProbability( string key, Peptide* protein, unsigne
 			
 			// finally, let's check whether there is a missing peptide (meaning that we are either
 			// at the beginning, or at the end of a chain
-			if(DEBUG) cout << "- Evaluating alterations close to an end of the chain..." << endl;
+			LOG_TRACE("- Evaluating alterations close to an end of the chain...");
 			double multiplier = 1.0;
 			
 			// iterate over the keys
@@ -915,10 +892,9 @@ double PepsinModel::computeCutProbability( string key, Peptide* protein, unsigne
 				// left part (key < 0)	      right part (key > 0)
 				if( position + key + 1 < 0 || position + key >= protein->length() )
 				{
-					if(DEBUG) cout 	<< "For position=" << position << " (" << protein->peptide[position]
+					LOG_TRACE(	"For position=" << position << " (" << protein->peptide[position]
 							<< ") and key=" << key
-							<< " in protein=\"" << protein->peptide << "\", we found an end!"
-							<< endl;
+							<< " in protein=\"" << protein->peptide << "\", we found an end!" );
 					
 					// only the LOWEST multiplier applies
 					if( keyMultiplier < multiplier ) multiplier = keyMultiplier;

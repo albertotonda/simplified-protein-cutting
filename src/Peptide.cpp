@@ -1,5 +1,6 @@
 // methods for the Peptide class
 #include "Peptide.h"
+#include <Log.h>
 
 using namespace std;
 
@@ -36,12 +37,11 @@ Peptide Peptide::substr(unsigned int start, unsigned int length )
 		{
 			// recreate the disulfide bond in the product, with the correct offset
 			result.disulfideBonds.push_back( this->disulfideBonds[i] - start );
-			cout 	<< "The old peptide had a disulfide bond in position #" << this->disulfideBonds[i]
-				<< " (\"" << this->peptide[ this->disulfideBonds[i] ]  
-				<< "\"), while the new peptide has a disulfide bond in position #" 
-				<< (this->disulfideBonds[i] - start)
-				<< " (\"" << result.peptide[ this->disulfideBonds[i] - start ] << "\")"
-				<< endl;
+			LOG_TRACE(	"The old peptide had a disulfide bond in position #" << this->disulfideBonds[i]
+					<< " (\"" << this->peptide[ this->disulfideBonds[i] ]
+					<< "\"), while the new peptide has a disulfide bond in position #"
+					<< (this->disulfideBonds[i] - start)
+					<< " (\"" << result.peptide[ this->disulfideBonds[i] - start ] << "\")" );
 		}
 	}
 
@@ -59,13 +59,11 @@ Peptide Peptide::substr(unsigned int pos)
 		if( this->disulfideBonds[i] >= pos )
 		{
 			result.disulfideBonds.push_back( this->disulfideBonds[i] - pos );
-			// this is debugging stuff, and should be removed
-			cout 	<< "The old peptide had a disulfide bond in position #" << this->disulfideBonds[i]
-				<< " (\"" << this->peptide[ this->disulfideBonds[i] ]  
-				<< "\"), while the new peptide has a disulfide bond in position #" 
-				<< (this->disulfideBonds[i] - pos)
-				<< " (\"" << result.peptide[ this->disulfideBonds[i] - pos ] << "\")"
-				<< endl;
+			LOG_TRACE(	"The old peptide had a disulfide bond in position #" << this->disulfideBonds[i]
+					<< " (\"" << this->peptide[ this->disulfideBonds[i] ]
+					<< "\"), while the new peptide has a disulfide bond in position #"
+					<< (this->disulfideBonds[i] - pos)
+					<< " (\"" << result.peptide[ this->disulfideBonds[i] - pos ] << "\")" );
 		}
 	}
 	
@@ -93,17 +91,17 @@ void Peptide::addDisulfideBond(unsigned int pos)
 		{
 			if( this->disulfideBonds[i] == pos)
 			{
-				cerr << "Warning: bond in position #" << pos << " is already inside the list of disulfide bonds." << endl;
+				LOG_WARN("Warning: bond in position #" << pos << " is already inside the list of disulfide bonds.");
 				return;
 			}
 		}
-		
+
 		this->disulfideBonds.push_back( pos );
-		
-		cout << "Added new disulfide bond in position #" << pos << ", corresponding to amino-acid \"" << this->peptide[pos] << "\"" << endl;
-		
+
+		LOG_DEBUG("Added new disulfide bond in position #" << pos << ", corresponding to amino-acid \"" << this->peptide[pos] << "\"");
+
 		return;
 	}
-	
-	cerr << "Warning: cannot add disulfide bond in position #" << pos << ": non-valid position." << endl;
+
+	LOG_WARN("Warning: cannot add disulfide bond in position #" << pos << ": non-valid position.");
 }
