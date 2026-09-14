@@ -55,7 +55,7 @@ public :
 	void run();
 	void step();
 
-	int readXml( std::string fileName );
+	int readJson( std::string fileName );
 	int writeLog( std::string fileName );
 
 };

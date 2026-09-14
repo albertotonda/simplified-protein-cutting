@@ -24,13 +24,13 @@ using namespace std;
 void printUsage(char* programName)
 {
 	cout 	<< endl << "Usage: " << programName << " "
-		<< OP_INPUT << " <input.xml> "
+		<< OP_INPUT << " <input.json> "
 		<< "[" << OP_OUTPUT << " <statistics.csv> "
 		<< OP_VERBOSE << " ]" << endl
 		<< endl
 		<< "Input arguments:" << endl
-		<< "\t" << OP_INPUT << " <input.xml>: the XML input file with the complete description of the problem." << endl
-		<< "\t" << OP_OUTPUT << " <statistics.csv>: the XML output file with the solution of the problem. This argument is optional, the default name is \"" << DEFAULT_OUTPUT << "\"" << endl
+		<< "\t" << OP_INPUT << " <input.json>: the JSON input file with the complete description of the problem." << endl
+		<< "\t" << OP_OUTPUT << " <statistics.csv>: the CSV output file with the solution of the problem. This argument is optional, the default name is \"" << DEFAULT_OUTPUT << "\"" << endl
 		<< "\t" << OP_VERBOSE << " : optional argument, regulates the verbosity of the program. By default, it's silent if not for possible errors." << endl
 		<< endl;
 
@@ -44,7 +44,7 @@ int main(int argc, char* argv[])
 	bool verbose = false;
 	unsigned int repetitions = DEFAULT_REPETITIONS;
 
-	string xmlInputFile;
+	string jsonInputFile;
 	string csvOutputFile;
 
 	// parse arguments
@@ -52,7 +52,7 @@ int main(int argc, char* argv[])
 	{
 		if( strcmp(argv[a], OP_INPUT) == 0 && a+1 < argc )
 		{
-			xmlInputFile = argv[a+1];
+			jsonInputFile = argv[a+1];
 		}
 		else if( strcmp(argv[a], OP_OUTPUT) == 0 && a+1 < argc )
 		{
@@ -77,9 +77,9 @@ int main(int argc, char* argv[])
 	}
 
 	// inputs check
-	if( xmlInputFile.length() <= 0 )
+	if( jsonInputFile.length() <= 0 )
 	{
-		cerr << "Error: an XML input file must be specified. Aborting..." << endl;
+		cerr << "Error: a JSON input file must be specified. Aborting..." << endl;
 		printUsage( argv[0] );
 		return 0;
 	}
@@ -95,8 +95,8 @@ int main(int argc, char* argv[])
 	// set verbosity of the model
 	pepsinModel.verbose = verbose;
 	
-	// load XML configuration
-	if( pepsinModel.readXml( xmlInputFile ) != EXIT_SUCCESS )
+	// load JSON configuration
+	if( pepsinModel.readJson( jsonInputFile ) != EXIT_SUCCESS )
 	{
 		return -1;
 	}

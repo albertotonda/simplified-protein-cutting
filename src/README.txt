@@ -16,7 +16,8 @@ In a nutshell, this software simulates the action of the pepsin enzyme on severa
 
 For more information, refer to: Tonda, Alberto and Grosvenor, Anita J and Clerens, Stefan and Le Feunteun, Steven, "In silico modeling of protein hydrolysis by endoproteases: a case study on pepsin digestion of bovine lactoferrin", Food & Function, 2017, DOI: 10.1039/C7FO00830A
 
-In order to parse XML configuration files, an (old) unaltered version of the tinyxml library is added to the directory. We did not write tinyxml, this beautiful library is authored by  Lee Thomason, Yves Berquin, and Andrew Ellerton. For more information on tinyxml, see http://www.grinninglizard.com/tinyxml/ 
+In order to parse JSON configuration files, the nlohmann/json library is vendored (as a single header) in src/thirdparty/nlohmann/. We did not write it, this excellent library is authored by Niels Lohmann; for more information, see https://github.com/nlohmann/json
+(Until 2026, configuration files were XML, parsed with the tinyxml library; the format was switched to JSON, see below.)
 
 Compiling instructions for Linux
 --------------------------------
@@ -26,9 +27,9 @@ Once you have CMAKE installed, you have two options: you can either run './test.
 
 If you decided to go step-by-step, run 'cmake .' in the main directory of the project. Then, run 'make'. The result of this procedure should be an executable called 'protein-cutting'.
 
-In order to run a simulation, you will need an .XML file that describes the structure of the protein, and the probabilities that the simulated pepsin enzyme will use to cut the bonds. In the directory a sample file is provided, "lactoferrin.xml": this file contains the structure of bovine lactoferrin, and it will simulate cutting 500 copies of the protein, using probabilities taken from Hamuro et al., 2008 and Powers et al., 1977 (see above for the DOIs).
+In order to run a simulation, you will need a .JSON file that describes the structure of the protein, and the probabilities that the simulated pepsin enzyme will use to cut the bonds. In the data directory a sample file is provided, "lactoferrin.json": this file contains the structure of bovine lactoferrin, and it will simulate cutting 500 copies of the protein, using probabilities taken from Hamuro et al., 2008 and Powers et al., 1977 (see above for the DOIs).
 
-To run a simulation, call './protein-cutting --input lactoferrin.xml'
+To run a simulation, call './protein-cutting --input lactoferrin.json'
 
 THE SIMULATION WILL TAKE SOME TIME TO COMPLETE (probably minutes to tens of minutes, depending on your hardware). ALSO, AT THE END, THE PROGRAM WILL TAKE A LONG TIME TO WRITE THE RESULT TO DISK. DON'T QUIT AT THAT POINT.
 
@@ -38,7 +39,7 @@ The program has a lot of output that is used mainly for debugging purposes (yes,
 
 Using the software for your work
 --------------------------------
-In order to use this software for your purpose, you don't need to modify the source code: the behavior of the simulations can be altered by simply editing the XML configuration file. The sample file 'lactoferrin.xml' is heavily commented, I would suggest starting from that and modifying it for your purpose, changing the protein(s) or the probabilities.
+In order to use this software for your purpose, you don't need to modify the source code: the behavior of the simulations can be altered by simply editing the JSON configuration file. The sample file 'lactoferrin.json' is heavily commented (the parser accepts "//" and "/* */" comments), I would suggest starting from that and modifying it for your purpose, changing the protein(s) or the probabilities.
 
 License
 -------

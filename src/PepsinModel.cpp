@@ -15,9 +15,11 @@
 #include <sstream>
 
 // local classes/libraries
-#include <tinyxml.h>
+// (JSON parsing; used to be tinyxml, until the switch from XML to JSON configuration files)
+#include <nlohmann/json.hpp>
+using json = nlohmann::json;
 
-// some defines, used mainly for the XML parsing
+// some defines, used mainly for the JSON parsing
 #define DEFAULT_CSV "statistics-"
 #define DEFAULT_OUTPUT "solution.xml"
 #define DEFAULT_REPETITIONS 1
@@ -28,36 +30,26 @@
 
 #define NAME_PEPSIN "pepsin"
 
-#define XML_ALTERATION "alteration"
-#define XML_ALTERATIONS "alterations"
-#define XML_CONFIGURATION "configuration"
-#define XML_CUT "cut"
-#define XML_CUTS "cuts"
-#define XML_INITIALPEPSIN "initialPepsin"
-#define XML_MAXATTEMPTS "maxAttempts"
-#define XML_MAXATTEMPTSPERTIME "maxAttemptsPerTime"
-#define XML_MAXDH "maxDH"
-#define XML_MAXTIME "maxTime"
-#define XML_PARAMETERS "parameters"
-#define XML_PEPSINALWAYSDYING "pepsinAlwaysDying"
-#define XML_PEPSINDYINGRATIO "pepsinDyingRatio"
-#define XML_PROTEIN "protein"
-#define XML_PROTEINS "proteins"
-#define XML_RANDOMSEED "randomSeed"
-#define XML_TERMINAL "terminal"
+#define JSON_ALTERATIONS "alterations"
+#define JSON_CUTS "cuts"
+#define JSON_INITIALPEPSIN "initialPepsin"
+#define JSON_MAXATTEMPTS "maxAttempts"
+#define JSON_MAXATTEMPTSPERTIME "maxAttemptsPerTime"
+#define JSON_MAXDH "maxDH"
+#define JSON_MAXTIME "maxTime"
+#define JSON_PARAMETERS "parameters"
+#define JSON_PEPSINALWAYSDYING "pepsinAlwaysDying"
+#define JSON_PEPSINDYINGRATIO "pepsinDyingRatio"
+#define JSON_PROTEINS "proteins"
+#define JSON_RANDOMSEED "randomSeed"
+#define JSON_TERMINALALTERATIONS "terminalAlterations"
 
-#define XML_ATTRIBUTE_AMINOACID "aminoacid"
-#define XML_ATTRIBUTE_LEFT "left"
-#define XML_ATTRIBUTE_MULTIPLIER "multiplier"
-#define XML_ATTRIBUTE_NAME "name"
-#define XML_ATTRIBUTE_RIGHT "right"
-#define XML_ATTRIBUTE_POSITION "position"
-#define XML_ATTRIBUTE_DISULFIDEBONDS "disulfideBonds"
-#define XML_ATTRIBUTE_PROBABILITY "probability"
-#define XML_ATTRIBUTE_QUANTITY "quantity"
-#define XML_ATTRIBUTE_SEED "randomSeed"
-#define XML_ATTRIBUTE_SIDE "side"
-#define XML_ATTRIBUTE_VALUE "value"
+#define JSON_FIELD_DISULFIDEBONDS "disulfideBonds"
+#define JSON_FIELD_LEFT "left"
+#define JSON_FIELD_NAME "name"
+#define JSON_FIELD_QUANTITY "quantity"
+#define JSON_FIELD_RIGHT "right"
+#define JSON_FIELD_SEQUENCE "sequence"
 
 // debugging purposes
 #define DEBUG 1 // set to 1 to activate debugging
@@ -92,106 +84,63 @@ PepsinModel::~PepsinModel()
 }
 
 // read the XML file and store the relevant information 
-int PepsinModel::readXml( string fileName )
+int PepsinModel::readJson( string fileName )
 {
-	if(verbose) cout << "Loading XML file..." << endl;
-	TiXmlDocument doc(fileName.c_str());
+	if(verbose) cout << "Loading JSON file..." << endl;
 
-	if( !doc.LoadFile() )
+	ifstream inStream( fileName.c_str() );
+	if( !inStream.is_open() )
 	{
-		cerr << "Error: cannot open file \"" << fileName << "\", or file is not proper XML. Aborting..." << endl;
+		cerr << "Error: cannot open file \"" << fileName << "\". Aborting..." << endl;
 		return -1;
 	}
-	
-	// start with the root
-	if(verbose) cout << "Parsing XML file..." << endl;
-	TiXmlElement* pRoot = doc.FirstChildElement(XML_CONFIGURATION);
-	if( pRoot == NULL )
+
+	json root;
+	try
 	{
-		cerr << "Error: tag \"" << XML_CONFIGURATION << "\" not found in the document. Aborting..." << endl;
+		// ignore_comments=true so the config file can use "//" and "/* */" comments,
+		// just like the old XML file was heavily commented
+		root = json::parse( inStream, /*callback*/ nullptr, /*allow_exceptions*/ true, /*ignore_comments*/ true );
+	}
+	catch( json::parse_error& e )
+	{
+		cerr << "Error: file \"" << fileName << "\" is not valid JSON (" << e.what() << "). Aborting..." << endl;
 		return -1;
 	}
-	
+
 	// first of all, parse the "parameters"
-	TiXmlElement* pParameters = pRoot->FirstChildElement(XML_PARAMETERS);
-	
 	// parameters are not compulsory (TODO REALLY?)
-	
-	if( pParameters != NULL )
+	if( root.contains(JSON_PARAMETERS) )
 	{
-		// check if there's a random seed
-		TiXmlElement* pRandomSeed = pParameters->FirstChildElement(XML_RANDOMSEED);
-		if( pRandomSeed != NULL )
-		{
-			const char* valueString = pRandomSeed->Attribute(XML_ATTRIBUTE_VALUE);
-			sscanf(valueString, "%u", &this->randomSeed);
-		}
-		
-		// check if there is a maximum time specified
-		TiXmlElement* pMaxTime = pParameters->FirstChildElement(XML_MAXTIME);
-		if( pMaxTime != NULL )
-		{
-			const char* valueString = pMaxTime->Attribute(XML_ATTRIBUTE_VALUE);
-			sscanf(valueString, "%u", &this->maxTime);
-		}
+		const json& parameters = root[JSON_PARAMETERS];
 
-		// check if there is a maximum time specified
-		TiXmlElement* pMaxDH = pParameters->FirstChildElement(XML_MAXDH);
-		if( pMaxDH != NULL )
-		{
-			const char* valueString = pMaxDH->Attribute(XML_ATTRIBUTE_VALUE);
-			sscanf(valueString, "%lf", &this->maxDH);
-		}
+		// check if there's a random seed (null / absent means "use time-based seed")
+		if( parameters.contains(JSON_RANDOMSEED) && !parameters[JSON_RANDOMSEED].is_null() )
+			this->randomSeed = parameters[JSON_RANDOMSEED].get<unsigned int>();
 
-		// check for maximum attempts per time 
-		TiXmlElement* pMaxAttemptsPerTime = pParameters->FirstChildElement(XML_MAXATTEMPTSPERTIME);
-		if( pMaxAttemptsPerTime != NULL )
-		{
-			const char* valueString = pMaxAttemptsPerTime->Attribute(XML_ATTRIBUTE_VALUE);
-			sscanf(valueString, "%u", &this->maxAttemptsPerTime);
-		}
+		if( parameters.contains(JSON_MAXTIME) )
+			this->maxTime = parameters[JSON_MAXTIME].get<unsigned int>();
 
-		// check for maximum attempts
-		TiXmlElement* pMaxAttempts = pParameters->FirstChildElement(XML_MAXATTEMPTS);
-		if( pMaxAttempts != NULL )
-		{
-			const char* valueString = pMaxAttempts->Attribute(XML_ATTRIBUTE_VALUE);
-			sscanf(valueString, "%u", &this->maxAttempts);
-		}
+		if( parameters.contains(JSON_MAXDH) )
+			this->maxDH = parameters[JSON_MAXDH].get<double>();
 
-		// check for initial pepsin
-		TiXmlElement* pInitialPepsin = pParameters->FirstChildElement(XML_INITIALPEPSIN);
-		if( pInitialPepsin != NULL )
-		{
-			const char* valueString = pInitialPepsin->Attribute(XML_ATTRIBUTE_VALUE);
-			sscanf(valueString, "%lf", &this->currentPepsin);
-		}
-		
+		if( parameters.contains(JSON_MAXATTEMPTSPERTIME) )
+			this->maxAttemptsPerTime = parameters[JSON_MAXATTEMPTSPERTIME].get<unsigned int>();
+
+		if( parameters.contains(JSON_MAXATTEMPTS) )
+			this->maxAttempts = parameters[JSON_MAXATTEMPTS].get<unsigned int>();
+
+		if( parameters.contains(JSON_INITIALPEPSIN) )
+			this->currentPepsin = parameters[JSON_INITIALPEPSIN].get<double>();
+
 		// check if pepsin dies at every timestep, or just when it does not cut
-		TiXmlElement* pPepsinAlwaysDying = pParameters->FirstChildElement(XML_PEPSINALWAYSDYING);
-		if( pPepsinAlwaysDying != NULL )
-		{
-			const char* valueString = pInitialPepsin->Attribute(XML_ATTRIBUTE_VALUE);
-			if( strcmp(valueString, "false") == 0 || strcmp(valueString, "0") == 0 )
-				this->pepsinAlwaysDying = false;
-			else if( strcmp(valueString, "true") == 0 || strcmp(valueString, "1") == 0 )
-				this->pepsinAlwaysDying = true;
-			else
-				cerr 	<< "Warning: value \"" << valueString 
-					<< "\" is not a valid option for tag \"" << XML_PEPSINALWAYSDYING
-					<< "\" (valid values are \"true\"/1 and \"false\"/0). The pepsinAlwaysDying will be set to "
-					<< this->pepsinAlwaysDying
-					<< endl;
-		}		
+		// (NOTE: the old XML parser had a copy-paste bug here, reading the "initialPepsin"
+		// value instead of "pepsinAlwaysDying"'s own value; fixed as part of the JSON migration)
+		if( parameters.contains(JSON_PEPSINALWAYSDYING) )
+			this->pepsinAlwaysDying = parameters[JSON_PEPSINALWAYSDYING].get<bool>();
 
-		// check for pepsin dying ratio
-		TiXmlElement* pPepsinDyingRatio = pParameters->FirstChildElement(XML_PEPSINDYINGRATIO);
-		if( pPepsinDyingRatio != NULL )
-		{
-			const char* valueString = pPepsinDyingRatio->Attribute(XML_ATTRIBUTE_VALUE);
-			sscanf(valueString, "%lf", &this->pepsinDyingRatio);
-		}
-
+		if( parameters.contains(JSON_PEPSINDYINGRATIO) )
+			this->pepsinDyingRatio = parameters[JSON_PEPSINDYINGRATIO].get<double>();
 	}
 
 	if( randomSeed != 0 )
@@ -207,130 +156,99 @@ int PepsinModel::readXml( string fileName )
 		if(verbose) cout << "Initializing random generator with time (" << timeRandomSeed << ")" << endl;
 		srand( timeRandomSeed );
 	}
-	
+
 	// take the proteins
 	// include the possibility of having different proteins in the initial set
-	TiXmlElement* pProtein = pRoot->FirstChildElement(XML_PROTEINS);
-	if( pProtein == NULL )
+	if( !root.contains(JSON_PROTEINS) )
 	{
-		cerr << "Error: tag \"" << XML_PROTEINS << "\" must be specified. Aborting..." << endl;
+		cerr << "Error: field \"" << JSON_PROTEINS << "\" must be specified. Aborting..." << endl;
 		return -1;
 	}
-	
-	// go into the tag
-	pProtein = pProtein->FirstChildElement(XML_PROTEIN);
-	
-	while( pProtein != NULL )
+
+	for( const json& protein : root[JSON_PROTEINS] )
 	{
 		if(verbose) cout	<< "Adding a protein..." << endl;
-		string originalProtein = pProtein->GetText();
-		
-		// ok, here we get two possible attributes: the name of the protein (unused) and the quantity (important!)
-		// recently, we added a third attribute, a string with a list of disulfide bonds
-		const char* proteinName = pProtein->Attribute(XML_ATTRIBUTE_NAME);
-		if(proteinName != NULL && verbose) cout	<< "Adding protein \"" << proteinName << "\"..." << endl;
+		string originalProtein = protein.value(JSON_FIELD_SEQUENCE, string(""));
+
+		// ok, here we get two possible fields: the name of the protein (unused) and the quantity (important!)
+		// recently, we added a third field, a list of disulfide bonds
+		if( protein.contains(JSON_FIELD_NAME) && verbose )
+			cout	<< "Adding protein \"" << protein[JSON_FIELD_NAME].get<string>() << "\"..." << endl;
 
 		// default quantity for each protein is 1
-		unsigned int proteinQuantity = 1;
-		const char* proteinQuantityString = pProtein->Attribute(XML_ATTRIBUTE_QUANTITY);
-		if( proteinQuantityString != NULL )
-		{
-			sscanf(proteinQuantityString, "%u", &proteinQuantity);
-		}
-		
+		unsigned int proteinQuantity = protein.value(JSON_FIELD_QUANTITY, 1u);
+
 		// remove all whitespaces and other stuff from the string
 		originalProtein.erase( std::remove_if( originalProtein.begin(), originalProtein.end(), ::isspace ), originalProtein.end() );
-		
-		if(verbose) cout 	<< "Adding protein with composition \"" << originalProtein 
-					<< "\", " << originalProtein.length() 
+
+		if(verbose) cout 	<< "Adding protein with composition \"" << originalProtein
+					<< "\", " << originalProtein.length()
 					<< " amminoacids long."  << endl;
-		
+
 		// create the Peptide with the original protein
 		Peptide originalProteinPeptide(originalProtein);
 
-		// add disulfide bonds (if they're there)
-		const char* disulfideBonds = pProtein->Attribute(XML_ATTRIBUTE_DISULFIDEBONDS);
-		if(disulfideBonds != NULL)
+		// add disulfide bonds (if they're there); positions in the file are 1-indexed
+		if( protein.contains(JSON_FIELD_DISULFIDEBONDS) )
 		{
-			if(verbose) cout 	<< "Found list of disulfide bonds: \"" << disulfideBonds << "\"" << endl;
-
-			// parse the string to get a list of unsigned int to add to the Peptide class
-			stringstream stream( disulfideBonds );
-			do
+			for( unsigned int bond : protein[JSON_FIELD_DISULFIDEBONDS] )
 			{
-				unsigned int bond;
-				stream >> bond;
-				
 				if(verbose) cout 	<< "Adding bond in position #" << bond
-							<< " to the protein (modified to #" 
+							<< " to the protein (modified to #"
 							<< (bond-1) << " for C++ internal array indexing)"
 							<< endl;
 
 				originalProteinPeptide.addDisulfideBond( bond-1 );
-			}while(stream);
-			
+			}
 		}
-		
+
 		for(unsigned int i = 0; i < proteinQuantity; i++)
 		{
 			if(verbose) cout << "\tAdding copy #" << (i+1) << "..." << endl;
 			// add the protein to the initial set
 			this->originalProteins.push_back( originalProteinPeptide );
-			
+
 			// increase the overall length of the original proteins
 			this->overallLength += originalProtein.length();
 		}
-		
-		// on to the next protein
-		pProtein = pProtein->NextSiblingElement();
 	}
-	
+
 	// check if there are proteins at all
 	if( originalProteins.size() == 0 )
 	{
-		cerr << "Error: no tags \"" << XML_PROTEIN << "\" found. Aborting..." << endl;
+		cerr << "Error: no proteins found in \"" << JSON_PROTEINS << "\". Aborting..." << endl;
 		return -1;
 	}
 
-	// then, take all the cuts
+	// then, take all the cuts: "cuts": { "<left>": { "<right>": probability, ... }, ... }
 	if(verbose) cout << "Reading the cuts..." << endl;
-	TiXmlElement* pCut = pRoot->FirstChildElement(XML_CUTS);
-	
-	if( pCut == NULL )
+	if( !root.contains(JSON_CUTS) )
 	{
-		cerr << "Error: tag \"" << XML_CUTS << "\" must be specified. Aborting..." << endl;
+		cerr << "Error: field \"" << JSON_CUTS << "\" must be specified. Aborting..." << endl;
 		return -1;
 	}
-	
-	// go into the tag
-	pCut = pCut->FirstChildElement(XML_CUT);
-	
-	while( pCut != NULL )
+
+	for( auto& leftEntry : root[JSON_CUTS].items() )
 	{
-		const char* left;
-		const char* right;
-		double probability = 0.0;
-
-		// get information about the cut
-		left = pCut->Attribute(XML_ATTRIBUTE_LEFT);
-		right = pCut->Attribute(XML_ATTRIBUTE_RIGHT);
-		pCut->QueryDoubleAttribute(XML_ATTRIBUTE_PROBABILITY, &probability);
-
-		// put everything inside the map, if probability > 0
-		if( probability > 0.0 )
+		const string& left = leftEntry.key();
+		for( auto& rightEntry : leftEntry.value().items() )
 		{
-			string key = left;
-			key += "\t";
-			key += right;
-			this->cutProbability[ key ] = probability;
-			
-			if(verbose) cout << "Cut \"" << key << "\" with probability=" << probability << " added" << endl;
-		}
+			const string& right = rightEntry.key();
+			double probability = rightEntry.value().get<double>();
 
-		// next element
-		pCut = pCut->NextSiblingElement();
+			// put everything inside the map, if probability > 0
+			if( probability > 0.0 )
+			{
+				string key = left;
+				key += "\t";
+				key += right;
+				this->cutProbability[ key ] = probability;
+
+				if(verbose) cout << "Cut \"" << key << "\" with probability=" << probability << " added" << endl;
+			}
+		}
 	}
-	
+
 	// check if the map is empty, it could be a problem
 	if( cutProbability.size() == 0 )
 	{
@@ -342,73 +260,64 @@ int PepsinModel::readXml( string fileName )
 	}
 
 	// proceed with managing the alterations
-	TiXmlElement* pAlteration = pRoot->FirstChildElement(XML_ALTERATIONS);
-	
 	// alterations are optional, so if they're not there it's not a big deal
-	if( pAlteration != NULL )
+	if( root.contains(JSON_ALTERATIONS) )
 	{
 		if(verbose) cout << "Now reading alterations..." << endl;
-		pAlteration = pAlteration->FirstChildElement(XML_ALTERATION);
-		while( pAlteration != NULL )
-		{
-			// so, the idea is to put the alterations in a hash map, that initially contains the
-			// unaltered probabilities, then compute the average + std influence on each column, 
-			// and then evaluate how much each element is outside some standard deviations from
-			// the mean; it could actually be a double hash map
-			
-			// read the attributes
-			string aminoacid, side, position, key;
-			double probability;
-			
-			aminoacid = pAlteration->Attribute(XML_ATTRIBUTE_AMINOACID);
-			side = pAlteration->Attribute(XML_ATTRIBUTE_SIDE);
-			position = pAlteration->Attribute(XML_ATTRIBUTE_POSITION);
-			pAlteration->QueryDoubleAttribute(XML_ATTRIBUTE_PROBABILITY, &probability);
-			
-			if( side.compare("left") == 0 ) 
-				key = "-";
-			else 
-				key = "+";
-			key += position;
-			
-			// store the alteration inside the map
-			this->alterations[ key ][ aminoacid ] = probability;
-			if(verbose) cout 	<< "- alteration[ " << key << " ][ " << aminoacid << " ] = " 
-						<< this->alterations[key][aminoacid] << endl;
 
-			// onto the next alteration
-			pAlteration = pAlteration->NextSiblingElement(XML_ALTERATION);
-		}
-		
-		// we added a second type of alteration, called "terminal", to take into account
-		// the alteration of the probabilities of cutting, if you are at either end of a chain
-		if(verbose) cout << "Now reading terminal alterations..." << endl;
-		TiXmlElement* pTerminal = pRoot->FirstChildElement(XML_ALTERATIONS)->FirstChildElement(XML_TERMINAL);
-		while( pTerminal != NULL )
+		// "alterations": { "<aminoacid>": { "left": { "<position>": probability, ... }, "right": {...} }, ... }
+		for( auto& aminoacidEntry : root[JSON_ALTERATIONS].items() )
 		{
-			// read the attributes
-			string side;
-			int key;
-			double multiplier;
-			
-			// TODO error control? raise exceptions?	
-			side = pTerminal->Attribute(XML_ATTRIBUTE_SIDE);
-			pTerminal->QueryIntAttribute(XML_ATTRIBUTE_POSITION, &key);
-			pTerminal->QueryDoubleAttribute(XML_ATTRIBUTE_MULTIPLIER, &multiplier);
-			
-			if( side.compare("left") == 0 ) 
-				key = -1 * key;
-			
-			// store this alteration inside the map
-			this->terminalAlterations[ key ] = multiplier;
-			if(verbose) cout	<< "- terminal alteration[ " << key << " ] = "
-						<< this->terminalAlterations[key] << endl;
-			
-			// onto to the next alteration
-			pTerminal = pTerminal->NextSiblingElement(XML_TERMINAL);
+			const string& aminoacid = aminoacidEntry.key();
+			const json& sides = aminoacidEntry.value();
+
+			for( const string& side : { string(JSON_FIELD_LEFT), string(JSON_FIELD_RIGHT) } )
+			{
+				if( !sides.contains(side) ) continue;
+
+				for( auto& positionEntry : sides[side].items() )
+				{
+					string key = (side == JSON_FIELD_LEFT) ? "-" : "+";
+					key += positionEntry.key();
+					double probability = positionEntry.value().get<double>();
+
+					// store the alteration inside the map
+					this->alterations[ key ][ aminoacid ] = probability;
+					if(verbose) cout 	<< "- alteration[ " << key << " ][ " << aminoacid << " ] = "
+								<< this->alterations[key][aminoacid] << endl;
+				}
+			}
 		}
-		
-		
+
+		// we also have a second type of alteration, called "terminal", to take into account
+		// the alteration of the probabilities of cutting, if you are at either end of a chain
+		// "terminalAlterations": { "left": { "<position>": multiplier, ... }, "right": {...} }
+		if(verbose) cout << "Now reading terminal alterations..." << endl;
+		if( root.contains(JSON_TERMINALALTERATIONS) )
+		{
+			const json& terminalAlterationsJson = root[JSON_TERMINALALTERATIONS];
+
+			for( const string& side : { string(JSON_FIELD_LEFT), string(JSON_FIELD_RIGHT) } )
+			{
+				if( !terminalAlterationsJson.contains(side) ) continue;
+
+				for( auto& positionEntry : terminalAlterationsJson[side].items() )
+				{
+					int key = std::stoi( positionEntry.key() );
+					double multiplier = positionEntry.value().get<double>();
+
+					if( side == JSON_FIELD_LEFT )
+						key = -1 * key;
+
+					// store this alteration inside the map
+					this->terminalAlterations[ key ] = multiplier;
+					if(verbose) cout	<< "- terminal alteration[ " << key << " ] = "
+								<< this->terminalAlterations[key] << endl;
+				}
+			}
+		}
+
+
 		// some statistics on alterations here
 		// iterate over the keys to get the average influence
 		for( map< string, map<string, double> >::iterator it = this->alterations.begin(); it != this->alterations.end(); it++)
