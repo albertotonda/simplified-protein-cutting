@@ -87,7 +87,7 @@ If you use this software in your publications, please cite:
 > "In silico modeling of protein hydrolysis by endoproteases: a case study on pepsin digestion of bovine lactoferrin",
 > Food & Function, 2017, DOI: 10.1039/C7FO00830A
 
-<details>
+<details open>
 <summary>BibTeX</summary>
 
 ```bibtex
