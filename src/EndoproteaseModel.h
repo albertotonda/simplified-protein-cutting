@@ -1,8 +1,12 @@
-// Class representing the pepsin model
+// Class representing a generic endoprotease model: given the frequency of cuts observed at
+// each pair of neighboring amino-acids, it stochastically simulates an enzyme cutting one or
+// more proteins. The case study used throughout this codebase (and its sample data) is pepsin
+// digesting bovine lactoferrin, but the model itself is not specific to pepsin -- any
+// endoprotease can be simulated, as long as cleavage frequency data is available for it.
 // by Alberto Tonda, 2014 <alberto.tonda@gmail.com>
 
-#ifndef __PEPSINMODEL__
-#define __PEPSINMODEL__
+#ifndef __ENDOPROTEASEMODEL__
+#define __ENDOPROTEASEMODEL__
 
 #include <map>
 #include <random>
@@ -12,7 +16,7 @@
 // forward declaration
 class Peptide;
 
-class PepsinModel
+class EndoproteaseModel
 {
 
 public :
@@ -27,33 +31,33 @@ public :
 	std::vector<Peptide> originalProteins;
 	// statistics on the proteins
 	std::map<std::string, std::map<unsigned int, unsigned int> > statistics;
-	// pepsin history
-	std::vector<double> pepsinHistory;
+	// enzyme (quantity) history
+	std::vector<double> enzymeHistory;
 	// time2 history TODO maybe it could be stored more efficiently
 	std::vector<unsigned int> time2History;
-	
+
 	// parameters of the model
-	double currentPepsin;
+	double currentEnzyme;
 	unsigned int overallLength; // length of all proteins
 	unsigned int maxAttempts;
 	unsigned int maxAttemptsPerTime;
 	double maxDH; // maximum degree of hydrolysis
 	unsigned int maxTime;
-	bool pepsinAlwaysDying;
-	double pepsinDyingRatio;
+	bool enzymeAlwaysDying;
+	double enzymeDyingRatio;
 	unsigned int randomSeed;
 	unsigned int t;
 
 	// per-instance random engine, replacing the old global rand()/srand(): using the C
-	// standard library's global generator meant no two PepsinModel instances could safely
-	// run at the same time (e.g. on separate threads, or one after another from Python,
-	// alongside other code that also happens to call rand()) without stepping on each
-	// other's state. Every instance now owns its own generator instead.
+	// standard library's global generator meant no two EndoproteaseModel instances could
+	// safely run at the same time (e.g. on separate threads, or one after another from
+	// Python, alongside other code that also happens to call rand()) without stepping on
+	// each other's state. Every instance now owns its own generator instead.
 	std::mt19937 randomEngine;
 
 	// constructor / destructor
-	PepsinModel();
-	~PepsinModel();
+	EndoproteaseModel();
+	~EndoproteaseModel();
 
 	// methods
 	//double computeCutProbability( std::string key, std::string* protein, unsigned int position );

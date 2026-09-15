@@ -1,7 +1,7 @@
-// Methods for the class representing the pepsin model
+// Methods for the class representing a generic endoprotease model
 
 // class header
-#include <PepsinModel.h>
+#include <EndoproteaseModel.h>
 
 // other classes used by this model
 #include <Peptide.h>
@@ -33,18 +33,18 @@ using json = nlohmann::json;
 #define MAX_FAILED_ATTEMPTS 100
 #define MAX_TIME 10000
 
-#define NAME_PEPSIN "pepsin"
+#define NAME_ENZYME "enzyme"
 
 #define JSON_ALTERATIONS "alterations"
 #define JSON_CUTS "cuts"
-#define JSON_INITIALPEPSIN "initialPepsin"
+#define JSON_INITIALENZYME "initialEnzyme"
 #define JSON_MAXATTEMPTS "maxAttempts"
 #define JSON_MAXATTEMPTSPERTIME "maxAttemptsPerTime"
 #define JSON_MAXDH "maxDH"
 #define JSON_MAXTIME "maxTime"
 #define JSON_PARAMETERS "parameters"
-#define JSON_PEPSINALWAYSDYING "pepsinAlwaysDying"
-#define JSON_PEPSINDYINGRATIO "pepsinDyingRatio"
+#define JSON_ENZYMEALWAYSDYING "enzymeAlwaysDying"
+#define JSON_ENZYMEDYINGRATIO "enzymeDyingRatio"
 #define JSON_PROTEINS "proteins"
 #define JSON_RANDOMSEED "randomSeed"
 #define JSON_TERMINALALTERATIONS "terminalAlterations"
@@ -60,46 +60,46 @@ using json = nlohmann::json;
 using namespace std;
 
 // constructor (basically it does nothing at all, besides providing a few default values)
-PepsinModel::PepsinModel() :
-currentPepsin(1.0),
+EndoproteaseModel::EndoproteaseModel() :
+currentEnzyme(1.0),
 maxAttemptsPerTime(10),
 maxAttempts(1000),
 maxDH(100.0),
 maxTime(10000),
 overallLength(0),
-pepsinAlwaysDying(false),
-pepsinDyingRatio(1.0),
+enzymeAlwaysDying(false),
+enzymeDyingRatio(1.0),
 randomSeed(0),
 t(0)
 {}
 
 // destructor
-PepsinModel::~PepsinModel()
+EndoproteaseModel::~EndoproteaseModel()
 {
 	// clear all the maps and vectors
 	this->alterations.clear();
 	this->cutProbability.clear();
 	this->originalProteins.clear();
-	this->pepsinHistory.clear();
+	this->enzymeHistory.clear();
 	this->statistics.clear();
 }
 
 // draw a random double in [0, 1) from this instance's own random engine
-double PepsinModel::randomUnit()
+double EndoproteaseModel::randomUnit()
 {
 	std::uniform_real_distribution<double> distribution(0.0, 1.0);
 	return distribution( this->randomEngine );
 }
 
 // draw a random unsigned int in [0, exclusiveUpperBound) from this instance's own random engine
-unsigned int PepsinModel::randomIndex( unsigned int exclusiveUpperBound )
+unsigned int EndoproteaseModel::randomIndex( unsigned int exclusiveUpperBound )
 {
 	std::uniform_int_distribution<unsigned int> distribution( 0, exclusiveUpperBound - 1 );
 	return distribution( this->randomEngine );
 }
 
 // read the XML file and store the relevant information 
-int PepsinModel::readJson( string fileName )
+int EndoproteaseModel::readJson( string fileName )
 {
 	LOG_DEBUG("Loading JSON file...");
 
@@ -145,17 +145,17 @@ int PepsinModel::readJson( string fileName )
 		if( parameters.contains(JSON_MAXATTEMPTS) )
 			this->maxAttempts = parameters[JSON_MAXATTEMPTS].get<unsigned int>();
 
-		if( parameters.contains(JSON_INITIALPEPSIN) )
-			this->currentPepsin = parameters[JSON_INITIALPEPSIN].get<double>();
+		if( parameters.contains(JSON_INITIALENZYME) )
+			this->currentEnzyme = parameters[JSON_INITIALENZYME].get<double>();
 
-		// check if pepsin dies at every timestep, or just when it does not cut
-		// (NOTE: the old XML parser had a copy-paste bug here, reading the "initialPepsin"
-		// value instead of "pepsinAlwaysDying"'s own value; fixed as part of the JSON migration)
-		if( parameters.contains(JSON_PEPSINALWAYSDYING) )
-			this->pepsinAlwaysDying = parameters[JSON_PEPSINALWAYSDYING].get<bool>();
+		// check if the enzyme dies at every timestep, or just when it does not cut
+		// (NOTE: the old XML parser had a copy-paste bug here, reading this value from the
+		// wrong field entirely; fixed as part of the JSON migration)
+		if( parameters.contains(JSON_ENZYMEALWAYSDYING) )
+			this->enzymeAlwaysDying = parameters[JSON_ENZYMEALWAYSDYING].get<bool>();
 
-		if( parameters.contains(JSON_PEPSINDYINGRATIO) )
-			this->pepsinDyingRatio = parameters[JSON_PEPSINDYINGRATIO].get<double>();
+		if( parameters.contains(JSON_ENZYMEDYINGRATIO) )
+			this->enzymeDyingRatio = parameters[JSON_ENZYMEDYINGRATIO].get<double>();
 	}
 
 	if( randomSeed != 0 )
@@ -423,7 +423,7 @@ int PepsinModel::readJson( string fileName )
 }
 
 // write the history to a file
-int PepsinModel::writeLog( string fileName )
+int EndoproteaseModel::writeLog( string fileName )
 {
 	LOG_DEBUG("Pre-processing statistics...");
 
@@ -431,7 +431,7 @@ int PepsinModel::writeLog( string fileName )
 	stringstream outStream;
 
 	// iterate over each protein to write the header
-	outStream << "\"time\",\"time2\",\"" << NAME_PEPSIN << "\"";
+	outStream << "\"time\",\"time2\",\"" << NAME_ENZYME << "\"";
 	for(map<string, map<unsigned int, unsigned int> >::iterator 	it = statistics.begin(); 
 									it != statistics.end(); 
 									it++)
@@ -487,7 +487,7 @@ int PepsinModel::writeLog( string fileName )
 
 		outStream 	<< localt << ","
 				<< this->time2History[localt] << ","
-				<< this->pepsinHistory[localt];
+				<< this->enzymeHistory[localt];
 
 		for(size_t col = 0; col < columnIt.size(); col++)
 		{
@@ -522,14 +522,14 @@ int PepsinModel::writeLog( string fileName )
 }
 
 // after initialization, here is the "true" run of the model!
-void PepsinModel::run()
+void EndoproteaseModel::run()
 {
 	LOG_DEBUG(	"Starting the simulation, with maxTime=" << maxTime
 			<< ", maxAttemptsPerTime=" << maxAttemptsPerTime
 			<< ", maxAttempts=" << maxAttempts
 			<< ", maxDH=" << maxDH
-			<< ", initialPepsin=" << currentPepsin
-			<< ", pepsinDyingRatio=" << pepsinDyingRatio );
+			<< ", initialEnzyme=" << currentEnzyme
+			<< ", enzymeDyingRatio=" << enzymeDyingRatio );
 
 	// initialize some values
 	unsigned int time2 = 0; // this variable is increased only when there is a cut
@@ -560,15 +560,15 @@ void PepsinModel::run()
 		lastQuantity[uniqueProteins[i].peptide] = occurrences;
 
 		// in order to compute the current degree of hydrolysis, we also need to take into account
-		// the total number of sites where the pepsin can cut the proteins
+		// the total number of sites where the enzyme can cut the proteins
 		dhTotalSites += (uniqueProteins[i].length() - 1) * occurrences;
 	}
-	
+
 	// some debugging
-	LOG_DEBUG("The total number of sites that the pepsin can cut is " << dhTotalSites);
-	
-	// also, take note of pepsin quantity and time2
-	this->pepsinHistory.push_back( currentPepsin );
+	LOG_DEBUG("The total number of sites that the enzyme can cut is " << dhTotalSites);
+
+	// also, take note of enzyme quantity and time2
+	this->enzymeHistory.push_back( currentEnzyme );
 	this->time2History.push_back( time2 );
 
 	// start!
@@ -588,10 +588,10 @@ void PepsinModel::run()
 		// reset the attempts done per instant of t
 		unsigned int attemptsPerTime = 0;
 
-		// before doing all the rest, just verify whether the pepsin acts
-		double randomPepsinActivation = this->randomUnit();
-		
-		if( randomPepsinActivation < currentPepsin)
+		// before doing all the rest, just verify whether the enzyme acts
+		double randomEnzymeActivation = this->randomUnit();
+
+		if( randomEnzymeActivation < currentEnzyme)
 		{
 			// find a random point in a random protein
 			// TODO this part could be sped up by creating a map< unsigned int, pair<unsigned int, unsigned int> > 
@@ -726,9 +726,9 @@ void PepsinModel::run()
 					attemptsPerTime++;
 					attempts++;
 					
-					// also, reduce the quantity of pepsin
-					if( this->pepsinAlwaysDying == false )
-						currentPepsin *= pepsinDyingRatio;
+					// also, reduce the quantity of enzyme
+					if( this->enzymeAlwaysDying == false )
+						currentEnzyme *= enzymeDyingRatio;
 				}
 				/*
 				if( currentPosition == startingPosition && proteinsIndex == startingProtein )
@@ -742,13 +742,13 @@ void PepsinModel::run()
 		}
 		else
 		{
-			// the pepsin did not activate
-			LOG_DEBUG("Pepsin did not activate.");
+			// the enzyme did not activate
+			LOG_DEBUG("Enzyme did not activate.");
 		}
-	
-		// if we are working with the idea that pepsin dies out with time, do it!
-		if( this->pepsinAlwaysDying == true )
-			currentPepsin *= pepsinDyingRatio;
+
+		// if we are working with the idea that the enzyme dies out with time, do it!
+		if( this->enzymeAlwaysDying == true )
+			currentEnzyme *= enzymeDyingRatio;
 		
 		// increase t
 		t++;
@@ -803,8 +803,8 @@ void PepsinModel::run()
 			}
 		}
 		
-		// take note of pepsin quantity and time2
-		this->pepsinHistory.push_back( currentPepsin );
+		// take note of enzyme quantity and time2
+		this->enzymeHistory.push_back( currentEnzyme );
 		this->time2History.push_back( time2 );
 	
 	} // end time loop
@@ -812,8 +812,8 @@ void PepsinModel::run()
 	return;
 }
 
-//double PepsinModel::computeCutProbability( string key, string* protein, unsigned int position )
-double PepsinModel::computeCutProbability( string key, Peptide* protein, unsigned int position )
+//double EndoproteaseModel::computeCutProbability( string key, string* protein, unsigned int position )
+double EndoproteaseModel::computeCutProbability( string key, Peptide* protein, unsigned int position )
 {
 	LOG_TRACE(	"Now computing probability for key=\"" << key
 			<< "\", protein=" << *protein

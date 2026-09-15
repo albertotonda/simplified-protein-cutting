@@ -19,7 +19,7 @@ target_include_directories(spdlog_headeronly INTERFACE ${PROTEIN_CUTTING_SOURCE_
 
 # core simulation logic, as a library so it can be reused by both the CLI
 # executable below and the future Python bindings
-add_library(protein-cutting-core STATIC PepsinModel.cpp Peptide.cpp Log.cpp)
+add_library(protein-cutting-core STATIC EndoproteaseModel.cpp Peptide.cpp Log.cpp)
 target_include_directories(protein-cutting-core PUBLIC ${PROTEIN_CUTTING_SOURCE_DIR})
 target_link_libraries(protein-cutting-core PUBLIC nlohmann_json spdlog_headeronly)
 

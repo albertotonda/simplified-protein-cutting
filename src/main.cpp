@@ -8,7 +8,7 @@
 #include <memory>
 
 // custom classes
-#include <PepsinModel.h>
+#include <EndoproteaseModel.h>
 #include <Log.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/sinks/basic_file_sink.h>
@@ -151,26 +151,26 @@ int main(int argc, char* argv[])
 	logging::setLevel( loggerLevel );
 
 	// create an instance of the model
-	PepsinModel pepsinModel;
+	EndoproteaseModel endoproteaseModel;
 
 	// load JSON configuration
-	if( pepsinModel.readJson( jsonInputFile ) != EXIT_SUCCESS )
+	if( endoproteaseModel.readJson( jsonInputFile ) != EXIT_SUCCESS )
 	{
 		return -1;
 	}
 
 	// run the model
-	LOG_INFO(	"Starting the simulation, with maxTime=" << pepsinModel.maxTime
-		<< ", maxAttemptsPerTime=" << pepsinModel.maxAttemptsPerTime
-		<< ", maxAttempts=" << pepsinModel.maxAttempts
-		<< ", maxDH=" << pepsinModel.maxDH
-		<< ", initialPepsin=" << pepsinModel.currentPepsin
-		<< ", pepsinDyingRatio=" << pepsinModel.pepsinDyingRatio );
-	pepsinModel.run();
+	LOG_INFO(	"Starting the simulation, with maxTime=" << endoproteaseModel.maxTime
+		<< ", maxAttemptsPerTime=" << endoproteaseModel.maxAttemptsPerTime
+		<< ", maxAttempts=" << endoproteaseModel.maxAttempts
+		<< ", maxDH=" << endoproteaseModel.maxDH
+		<< ", initialEnzyme=" << endoproteaseModel.currentEnzyme
+		<< ", enzymeDyingRatio=" << endoproteaseModel.enzymeDyingRatio );
+	endoproteaseModel.run();
 
 	// write statistics to file
 	LOG_INFO("Processing statistics and writing to file \"" << csvOutputFile << "\"...");
-	pepsinModel.writeLog( csvOutputFile );
+	endoproteaseModel.writeLog( csvOutputFile );
 
 	// end
 	LOG_INFO("Done.");

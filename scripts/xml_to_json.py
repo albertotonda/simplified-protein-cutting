@@ -43,26 +43,29 @@ def convert(xml_path, json_path):
     lines.append(f'\t\t"maxTime": {get_value(params, "maxTime", "1200000")},')
     lines.append("\t\t// stop condition: stop after reaching the given degree of hydrolysis (DH)")
     lines.append(f'\t\t"maxDH": {num(get_value(params, "maxDH", "0.10"))},')
-    lines.append("\t\t// how many attempts to cut should the simulated pepsin perform, per iteration")
+    lines.append("\t\t// how many attempts to cut should the simulated enzyme perform, per iteration")
     lines.append(f'\t\t"maxAttemptsPerTime": {get_value(params, "maxAttemptsPerTime", "1")},')
     lines.append("\t\t// stop condition: stop after failing this many consecutive attempts to cut")
     lines.append(f'\t\t"maxAttempts": {get_value(params, "maxAttempts", "1000")},')
     lines.append("")
     lines.append("\t\t// THE FOLLOWING THREE ARE EXPERIMENTAL, ADVISE NOT TO MODIFY THEM")
-    lines.append("\t\t// pepsin 'dies out' during the process, so it is more effective at the beginning; we thought it could be")
-    lines.append("\t\t// interesting to have pepsin reduce its probability of activation during time, but the code is not ready")
-    lines.append(f'\t\t"initialPepsin": {num(get_value(params, "initialPepsin", "1.0"))},')
+    lines.append("\t\t// the enzyme 'dies out' during the process, so it is more effective at the beginning; we thought it could be")
+    lines.append("\t\t// interesting to have the enzyme reduce its probability of activation during time, but the code is not ready")
+    # NOTE: the source XML's own tags are named "initialPepsin"/"pepsinAlwaysDying"/"pepsinDyingRatio"
+    # (that historical format was pepsin-specific); the JSON schema they're converted into uses the
+    # generic "enzyme" naming the C++ code now uses, since the model itself works for any endoprotease.
+    lines.append(f'\t\t"initialEnzyme": {num(get_value(params, "initialPepsin", "1.0"))},')
 
     always_dying = get_value(params, "pepsinAlwaysDying", "false")
     always_dying_json = "true" if always_dying.strip().lower() in ("true", "1") else "false"
-    lines.append(f'\t\t"pepsinAlwaysDying": {always_dying_json},')
-    lines.append(f'\t\t"pepsinDyingRatio": {num(get_value(params, "pepsinDyingRatio", "1.0"))}')
+    lines.append(f'\t\t"enzymeAlwaysDying": {always_dying_json},')
+    lines.append(f'\t\t"enzymeDyingRatio": {num(get_value(params, "pepsinDyingRatio", "1.0"))}')
     lines.append("\t},")
     lines.append("")
 
     # ---------------- proteins ----------------
     lines.append('\t// here you can define multiple proteins, each with a number of copies ("quantity").')
-    lines.append('\t// "disulfideBonds" lists 1-indexed positions in the sequence that pepsin finds harder to cut')
+    lines.append('\t// "disulfideBonds" lists 1-indexed positions in the sequence that the enzyme finds harder to cut')
     lines.append("\t// (not all of them are disulfide bonds, some are glycosylations)")
     lines.append('\t"proteins": [')
 

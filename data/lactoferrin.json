@@ -9,21 +9,21 @@
 		"maxTime": 1200000,
 		// stop condition: stop after reaching the given degree of hydrolysis (DH)
 		"maxDH": 0.1,
-		// how many attempts to cut should the simulated pepsin perform, per iteration
+		// how many attempts to cut should the simulated enzyme perform, per iteration
 		"maxAttemptsPerTime": 1,
 		// stop condition: stop after failing this many consecutive attempts to cut
 		"maxAttempts": 1000,
 
 		// THE FOLLOWING THREE ARE EXPERIMENTAL, ADVISE NOT TO MODIFY THEM
-		// pepsin 'dies out' during the process, so it is more effective at the beginning; we thought it could be
-		// interesting to have pepsin reduce its probability of activation during time, but the code is not ready
-		"initialPepsin": 1.0,
-		"pepsinAlwaysDying": false,
-		"pepsinDyingRatio": 1.0
+		// the enzyme 'dies out' during the process, so it is more effective at the beginning; we thought it could be
+		// interesting to have the enzyme reduce its probability of activation during time, but the code is not ready
+		"initialEnzyme": 1.0,
+		"enzymeAlwaysDying": false,
+		"enzymeDyingRatio": 1.0
 	},
 
 	// here you can define multiple proteins, each with a number of copies ("quantity").
-	// "disulfideBonds" lists 1-indexed positions in the sequence that pepsin finds harder to cut
+	// "disulfideBonds" lists 1-indexed positions in the sequence that the enzyme finds harder to cut
 	// (not all of them are disulfide bonds, some are glycosylations)
 	"proteins": [
 		{
