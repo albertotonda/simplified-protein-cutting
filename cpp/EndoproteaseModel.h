@@ -13,6 +13,8 @@
 #include <string>
 #include <vector>
 
+#include <nlohmann/json.hpp>
+
 // forward declaration
 class Peptide;
 
@@ -70,8 +72,29 @@ public :
 	// draw a random unsigned int in [0, exclusiveUpperBound) from this instance's own random engine
 	unsigned int randomIndex( unsigned int exclusiveUpperBound );
 
+	// parse a JSON configuration, either from a file (readJson) or from an already-parsed
+	// value (readJsonObject) -- the latter is what lets Python callers pass a native dict
+	// directly (converted to nlohmann::json via pybind11_json) without writing a file first.
 	int readJson( std::string fileName );
+	int readJsonObject( const nlohmann::json& root );
+
 	int writeLog( std::string fileName );
+
+	// a computed, dense time series ready for output: one row per "print point" (every
+	// `period`-th distinct value of time2, see writeLog()'s original comment for why), one
+	// column per distinct peptide produced during the simulation, counts carried forward
+	// between change-points. writeLog() and the Python bindings both build on this, instead
+	// of each re-implementing the (optimized) carry-forward walk over `statistics`.
+	struct TimeSeries
+	{
+		std::vector<unsigned int> time;
+		std::vector<unsigned int> time2;
+		std::vector<double> enzyme;
+		std::vector<std::string> peptideNames;
+		// peptideCounts[column][row], columns in the same order as peptideNames
+		std::vector< std::vector<unsigned int> > peptideCounts;
+	};
+	TimeSeries computeTimeSeries( unsigned int period = 10 );
 
 };
 

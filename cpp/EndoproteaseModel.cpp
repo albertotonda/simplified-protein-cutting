@@ -98,7 +98,10 @@ unsigned int EndoproteaseModel::randomIndex( unsigned int exclusiveUpperBound )
 	return distribution( this->randomEngine );
 }
 
-// read the XML file and store the relevant information 
+// read a JSON configuration file from disk, then hand off to readJsonObject() below.
+// Kept separate so the same parsing logic can also be driven directly from an
+// already-in-memory JSON value (e.g. a Python dict, converted via pybind11_json) without
+// needing to write it to a temporary file first.
 int EndoproteaseModel::readJson( string fileName )
 {
 	LOG_DEBUG("Loading JSON file...");
@@ -123,6 +126,12 @@ int EndoproteaseModel::readJson( string fileName )
 		return -1;
 	}
 
+	return this->readJsonObject( root );
+}
+
+// store the relevant information from an already-parsed JSON configuration
+int EndoproteaseModel::readJsonObject( const json& root )
+{
 	// first of all, parse the "parameters"
 	// parameters are not compulsory (TODO REALLY?)
 	if( root.contains(JSON_PARAMETERS) )
@@ -422,84 +431,100 @@ int EndoproteaseModel::readJson( string fileName )
 	return 0;
 }
 
-// write the history to a file
-int EndoproteaseModel::writeLog( string fileName )
+// Build the (row, column) time series used for output: one row per "print point" (every
+// `period`-th distinct value of time2, to avoid HUGE outputs -- see the note below), one
+// column per distinct peptide produced during the simulation, counts carried forward between
+// change-points.
+//
+// This used to be folded directly into writeLog(), re-checking (per-column, per-localt)
+// whether the current iteration was a print point -- for the full lactoferrin run that meant
+// something like 990,000 iterations x 10,000 peptide columns = ~9.9 BILLION map::find() calls
+// to produce just 3,441 output rows, which is what made that function take ~15 minutes.
+// TODO
+// - is it possible to change the increments so that localt += period?
+// - period readable by configuration file
+EndoproteaseModel::TimeSeries EndoproteaseModel::computeTimeSeries( unsigned int period )
 {
 	LOG_DEBUG("Pre-processing statistics...");
 
-	// trying to put some buffering, in order not to block the file for too long
-	stringstream outStream;
+	TimeSeries series;
 
-	// iterate over each protein to write the header
-	outStream << "\"time\",\"time2\",\"" << NAME_ENZYME << "\"";
-	for(map<string, map<unsigned int, unsigned int> >::iterator 	it = statistics.begin(); 
-									it != statistics.end(); 
-									it++)
-	{
-		outStream << ",\"" << it->first << "\"";
-	}
-	outStream << "\n";
-
-	// statistics are only printed every "period" iterations of time2 (to avoid HUGE log files);
 	// figure out, in a single cheap pass over 0..t, exactly which localt values are actually
-	// going to be printed. This used to be folded into the loop below and checked (repeatedly)
-	// per-column, per-localt -- for the full lactoferrin run that meant something like
-	// 990,000 iterations x 10,000 peptide columns = ~9.9 BILLION map::find() calls to produce
-	// just 3,441 output rows, which is what made this function take ~15 minutes.
-	// TODO
-	// - is it possible to change the increments so that localt += period?
-	// - period readable by configuration file
-	unsigned int period = 10; // when localt % period is used, period = 100
-	vector<unsigned int> printTimes;
+	// going to be included: the first localt to reach each new multiple of `period` in time2
 	{
 		int lastTime2 = -1;
 		for(unsigned int localt = 0; localt < t; localt++)
 		{
 			if( this->time2History[localt] % period == 0 && (int)this->time2History[localt] != lastTime2 )
 			{
-				printTimes.push_back( localt );
+				series.time.push_back( localt );
+				series.time2.push_back( this->time2History[localt] );
+				series.enzyme.push_back( this->enzymeHistory[localt] );
 				lastTime2 = this->time2History[localt];
 			}
 		}
 	}
 
-	// for each peptide column, walk its own (sparse) map of change-points alongside printTimes
+	// for each peptide column, walk its own (sparse) map of change-points alongside series.time
 	// with a simple iterator advance instead of a fresh find() per row: both are sorted by t,
-	// so this is a linear merge, and each column ends up doing roughly (printTimes.size() +
+	// so this is a linear merge, and each column ends up doing roughly (series.time.size() +
 	// its own number of changes) work in total, instead of t.size() lookups regardless of
-	// whether the row is even going to be printed
-	vector<unsigned int> columnValue( statistics.size(), 0 );
-	vector< map<unsigned int, unsigned int>::const_iterator > columnIt;
-	vector< map<unsigned int, unsigned int>::const_iterator > columnEnd;
-	columnIt.reserve( statistics.size() );
-	columnEnd.reserve( statistics.size() );
+	// whether the row is even going to be included
+	series.peptideNames.reserve( statistics.size() );
+	series.peptideCounts.assign( statistics.size(), vector<unsigned int>( series.time.size(), 0 ) );
+
+	size_t col = 0;
 	for(map<string, map<unsigned int, unsigned int> >::iterator 	it = statistics.begin();
 									it != statistics.end();
-									it++)
+									it++, col++)
 	{
-		columnIt.push_back( it->second.begin() );
-		columnEnd.push_back( it->second.end() );
-	}
+		series.peptideNames.push_back( it->first );
 
-	for(size_t row = 0; row < printTimes.size(); row++)
-	{
-		unsigned int localt = printTimes[row];
+		unsigned int columnValue = 0;
+		map<unsigned int, unsigned int>::const_iterator changeIt = it->second.begin();
+		map<unsigned int, unsigned int>::const_iterator changeEnd = it->second.end();
 
-		outStream 	<< localt << ","
-				<< this->time2History[localt] << ","
-				<< this->enzymeHistory[localt];
-
-		for(size_t col = 0; col < columnIt.size(); col++)
+		for(size_t row = 0; row < series.time.size(); row++)
 		{
+			unsigned int localt = series.time[row];
+
 			// advance to the most recent change at or before this row's t
-			while( columnIt[col] != columnEnd[col] && columnIt[col]->first <= localt )
+			while( changeIt != changeEnd && changeIt->first <= localt )
 			{
-				columnValue[col] = columnIt[col]->second;
-				++columnIt[col];
+				columnValue = changeIt->second;
+				++changeIt;
 			}
 
-			outStream << "," << columnValue[col];
+			series.peptideCounts[col][row] = columnValue;
 		}
+	}
+
+	return series;
+}
+
+// write the history to a CSV file
+int EndoproteaseModel::writeLog( string fileName )
+{
+	TimeSeries series = this->computeTimeSeries();
+
+	// trying to put some buffering, in order not to block the file for too long
+	stringstream outStream;
+
+	// header
+	outStream << "\"time\",\"time2\",\"" << NAME_ENZYME << "\"";
+	for(const string& name : series.peptideNames)
+		outStream << ",\"" << name << "\"";
+	outStream << "\n";
+
+	// data rows
+	for(size_t row = 0; row < series.time.size(); row++)
+	{
+		outStream 	<< series.time[row] << ","
+				<< series.time2[row] << ","
+				<< series.enzyme[row];
+
+		for(size_t col = 0; col < series.peptideNames.size(); col++)
+			outStream << "," << series.peptideCounts[col][row];
 
 		outStream << "\n";
 	}
@@ -512,7 +537,7 @@ int EndoproteaseModel::writeLog( string fileName )
 		LOG_ERROR("Error: cannot write on file \"" << fileName << "\". Aborting...");
 		return -1;
 	}
-	
+
 	csvOut << outStream.str();
 
 	csvOut.close();

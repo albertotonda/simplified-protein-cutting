@@ -20,8 +20,9 @@
 // would otherwise shadow a namespace called "log" and break "log::get()" et al.
 namespace logging
 {
-	// name of the shared logger; also the name a future Python `logging.getLogger()` would use
-	constexpr const char* LOGGER_NAME = "protein_cutting";
+	// name of the shared logger; also the name the Python bindings register with Python's
+	// own `logging` module (logging.getLogger("endocleave"))
+	constexpr const char* LOGGER_NAME = "endocleave";
 
 	// the shared logger instance; silent (null sink) until setSinks() is called
 	std::shared_ptr<spdlog::logger>& get();
