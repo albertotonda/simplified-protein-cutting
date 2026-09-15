@@ -15,12 +15,14 @@ In a nutshell, this software simulates the action of an enzyme on several copies
 ```
 data/                sample input (lactoferrin.json) and a small test script
 scripts/              utility scripts (e.g. the old XML -> JSON converter)
-cpp/                  C++ source code (the original core, plus the future Python bindings)
-cpp/thirdparty/       vendored dependencies (nlohmann/json, spdlog)
-src/endocleave/       the Python package (in progress, see "Project status / roadmap" below)
+cpp/                  C++ source code: the core, the CLI, and the pybind11 bindings
+cpp/thirdparty/       vendored dependencies (nlohmann/json, spdlog, pybind11_json)
+src/endocleave/       the Python package (pure-Python wrapper; the compiled
+                      extension lands here too once built, see "Python package" below)
+pyproject.toml        Python packaging config (scikit-build-core)
 ```
 
-The original code is in C++, and is contained in the `cpp/` subfolder. A Python package (`endocleave`) wrapping it via pybind11 is under active development, in `src/endocleave/` (a "src-layout" Python package, following the convention expected by Python's packaging tools — not to be confused with `cpp/`, which holds the C++ sources).
+The original code is in C++, and is contained in the `cpp/` subfolder. A Python package (`endocleave`) wrapping it via pybind11 lives in `src/endocleave/` (a "src-layout" Python package, following the convention expected by Python's packaging tools — not to be confused with `cpp/`, which holds the C++ sources).
 
 ## Building the C++ code
 
@@ -74,13 +76,53 @@ Until 2026, configuration files were XML, parsed with the [tinyxml](http://www.g
 
 The program produces a CSV file (`statistics.csv` by default) tracking the quantity of each peptide over the course of the simulation. Columns are `time` (iteration count), `time2` (number of cuts so far), `enzyme` (currently always 1.0, reserved for future developments), followed by one column per distinct peptide produced during the simulation, in alphabetical order. Each row gives the count of each peptide at that point in the simulation. The resulting file is usually large (~70 MB for the lactoferrin example); extracting meaningful information from it typically requires a separate analysis script rather than manual inspection.
 
+## Python package
+
+The C++ core is also available from Python, as the `endocleave` package: [pybind11](https://github.com/pybind/pybind11) bindings over the same core used by the CLI, built with [scikit-build-core](https://github.com/scikit-build/scikit-build-core) so a normal `pip install` compiles everything automatically — no separate C++ build step, and no dependency on CMake or a compiler once installed.
+
+```sh
+pip install .
+```
+
+(run from the repository root; not yet published on PyPI).
+
+```python
+import endocleave
+
+# high-level: JSON file or dict in, a pandas.DataFrame out (same columns as the CSV above)
+df = endocleave.simulate("data/lactoferrin.json")
+
+# optionally, also write the CSV file, same as the CLI's --output
+df = endocleave.simulate("data/lactoferrin.json", output="statistics.csv")
+```
+
+For full control, use the lower-level `EndoproteaseModel` class directly — a near 1-to-1 binding of the C++ class, with plain read/write attributes for every simulation parameter:
+
+```python
+from endocleave import EndoproteaseModel
+import pandas as pd
+
+model = EndoproteaseModel()
+model.read_json("data/lactoferrin.json")   # or model.read_config({...}) for a native dict
+model.max_dh = 0.05
+model.run()
+df = pd.DataFrame(model.compute_time_series())
+```
+
+Logging goes through the standard `logging` module, under the name `"endocleave"`. Verbosity is controlled with `endocleave.set_log_level(...)` rather than `logging.getLogger("endocleave").setLevel(...)` directly: the native core uses its own log level as a performance gate (deciding whether to even format a message), so the two have to stay in sync, and `set_log_level()` does that in one call.
+
+```python
+endocleave.set_log_level("debug")
+```
+
 ## Project status / roadmap
 
 - ✅ Configuration format switched from XML to JSON.
 - ✅ Logging rewritten (leveled, quiet by default, opt-in file output) in preparation for reuse from other languages.
 - ✅ Model and parameter names generalized (`EndoproteaseModel`, `enzyme*` fields) — the simulation was never pepsin-specific, and now neither is its naming.
-- ✅ Repository reorganized (`cpp/` for the C++ core, `src/endocleave/` for the Python package skeleton) in preparation for packaging.
-- ⏳ In progress: pybind11 bindings and a `simulate()` convenience API, to be published as the `endocleave` Python package on PyPI.
+- ✅ Repository reorganized (`cpp/` for the C++ core, `src/endocleave/` for the Python package).
+- ✅ pybind11 bindings, a `simulate()` convenience API, and a working `pip install .` (via scikit-build-core).
+- ⏳ Planned: publish `endocleave` on PyPI, with prebuilt wheels (via `cibuildwheel`) for the common platforms.
 
 ## Citation
 
@@ -121,6 +163,6 @@ Permission to use, copy, modify, and/or distribute this software for any purpose
 
 THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-`nlohmann/json` (vendored in `cpp/thirdparty/nlohmann/`) is authored by Niels Lohmann and distributed under the MIT license. `spdlog` (vendored in `cpp/thirdparty/spdlog/`) is authored by Gabi Melman and distributed under the MIT license. The original tinyxml library (no longer used, kept out of the repository) was authored by Lee Thomason, Yves Berquin, and Andrew Ellerton.
+`nlohmann/json` (vendored in `cpp/thirdparty/nlohmann/`) is authored by Niels Lohmann and distributed under the MIT license. `spdlog` (vendored in `cpp/thirdparty/spdlog/`) is authored by Gabi Melman and distributed under the MIT license. `pybind11_json` (vendored in `cpp/thirdparty/pybind11_json/`) is authored by Martin Renou and distributed under the BSD 3-Clause license. [pybind11](https://github.com/pybind/pybind11) itself and [scikit-build-core](https://github.com/scikit-build/scikit-build-core) are build-time-only dependencies (not vendored, resolved automatically by `pip` from `pyproject.toml`), both distributed under permissive licenses (BSD-style and Apache 2.0, respectively). The original tinyxml library (no longer used, kept out of the repository) was authored by Lee Thomason, Yves Berquin, and Andrew Ellerton.
 
 In case you need help, advice, or you notice a bug, please contact Alberto Tonda \<alberto.tonda@gmail.com\>.

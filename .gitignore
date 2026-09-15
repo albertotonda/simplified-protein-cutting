@@ -3,3 +3,11 @@
 /cpp/build
 /local_results
 /.venv
+
+# Python packaging artifacts
+/dist
+/wheelhouse
+/_skbuild
+*.egg-info
+__pycache__/
+*.pyc

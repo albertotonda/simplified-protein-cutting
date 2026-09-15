@@ -55,6 +55,12 @@ if(Python_FOUND AND pybind11_FOUND)
 		# also what's needed for a redistributable wheel later).
 		target_link_options(_core PRIVATE -static)
 	endif()
+
+	# scikit-build-core's convention: whatever is install()'d ends up in the wheel, rooted
+	# at the install prefix it sets up; installing straight into "endocleave" merges the
+	# compiled module into the same package directory as the pure-Python files it copies
+	# from src/endocleave/ (see pyproject.toml's [tool.scikit-build] wheel.packages).
+	install(TARGETS _core DESTINATION endocleave)
 else()
 	message(STATUS "Python and/or pybind11 not found: skipping the _core Python extension module (the CLI is unaffected)")
 endif()

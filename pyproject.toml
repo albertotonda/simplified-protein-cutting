@@ -1,0 +1,39 @@
+[build-system]
+requires = ["scikit-build-core>=0.10", "pybind11>=2.13"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "endocleave"
+version = "0.1.0.dev0"
+description = "Stochastic simulation of protein hydrolysis by endoproteases, from cleavage-frequency data"
+readme = "README.md"
+license = { text = "ISC" }
+authors = [
+    { name = "Alberto Tonda", email = "alberto.tonda@gmail.com" },
+]
+requires-python = ">=3.9"
+keywords = ["protein", "peptide", "endoprotease", "proteolysis", "hydrolysis", "bioinformatics", "simulation"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: ISC License (ISCL)",
+    "Programming Language :: C++",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "Topic :: Scientific/Engineering :: Chemistry",
+]
+dependencies = [
+    "pandas>=1.5",
+]
+
+[project.urls]
+Homepage = "https://github.com/albertotonda/simplified-protein-cutting"
+Repository = "https://github.com/albertotonda/simplified-protein-cutting"
+Paper = "https://doi.org/10.1039/c7fo00830a"
+
+[tool.scikit-build]
+cmake.source-dir = "cpp"
+cmake.build-type = "Release"
+# only the Python extension module gets install()'d by cpp/CMakeLists.txt (see there); the
+# CLI executable is deliberately not bundled into the wheel for now
+wheel.packages = ["src/endocleave"]
