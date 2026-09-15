@@ -13,6 +13,7 @@
 #include <cmath>
 #include <ctime>
 #include <sstream>
+#include <vector>
 
 // local classes/libraries
 // (JSON parsing; used to be tinyxml, until the switch from XML to JSON configuration files)
@@ -422,71 +423,70 @@ int PepsinModel::writeLog( string fileName )
 	{
 		outStream << ",\"" << it->first << "\"";
 	}
-	outStream << endl;
+	outStream << "\n";
 
-	// create a temporary structure with all peptides, used later to store the last quantity
-	// appearing in the table; many lines are the same, and will be copied
-	map<string, unsigned int> lastQuantity;
-	
-	for(map<string, map<unsigned int, unsigned int> >::iterator 	it = statistics.begin(); 
-									it != statistics.end(); 
-									it++)
-	{
-		if( it->second.find( 0 ) != it->second.end() )
-			lastQuantity[ it->first ] = it->second.find( 0 )->second;
-		else
-			lastQuantity[ it->first ] = 0;
-	}
-	
-	// then, iterate over t; if there is no quantity of protein for that time, put 0
-	// statistics are stored only "period" iterations, to avoid HUGE log files
+	// statistics are only printed every "period" iterations of time2 (to avoid HUGE log files);
+	// figure out, in a single cheap pass over 0..t, exactly which localt values are actually
+	// going to be printed. This used to be folded into the loop below and checked (repeatedly)
+	// per-column, per-localt -- for the full lactoferrin run that meant something like
+	// 990,000 iterations x 10,000 peptide columns = ~9.9 BILLION map::find() calls to produce
+	// just 3,441 output rows, which is what made this function take ~15 minutes.
 	// TODO
 	// - is it possible to change the increments so that localt += period?
 	// - period readable by configuration file
 	unsigned int period = 10; // when localt % period is used, period = 100
-	int lastTime2 = -1;
-	for(unsigned int localt = 0; localt < t; localt++)
+	vector<unsigned int> printTimes;
 	{
-		//if( localt % period == 0 ) outStream 	<< localt << "," 
-		if( this->time2History[localt] % period == 0 && this->time2History[localt] != lastTime2 ) 
+		int lastTime2 = -1;
+		for(unsigned int localt = 0; localt < t; localt++)
 		{
-			outStream 	<< localt << "," 
-					<< this->time2History[localt] << ","
-					<< this->pepsinHistory[localt];
-		}
-
-		for(map<string, map<unsigned int, unsigned int> >::iterator 	it = statistics.begin(); 
-										it != statistics.end(); 
-										it++)
-		{
-			if( this->time2History[localt] % period == 0 && this->time2History[localt] != lastTime2 ) 
-				outStream << ",";
-
-			// if there is an occurrence in the map for that protein
-			if( it->second.find(localt) != it->second.end() )
+			if( this->time2History[localt] % period == 0 && (int)this->time2History[localt] != lastTime2 )
 			{
-				if( this->time2History[localt] % period == 0 && this->time2History[localt] != lastTime2 ) 
-					outStream << it->second.find(localt)->second;
-				
-				// update the "last quantity" map
-				lastQuantity[ it->first ] = it->second.find(localt)->second;
-			}
-			else
-			{
-				// otherwise, the quantity is the last one stored in the map 
-				if( this->time2History[localt] % period == 0 && this->time2History[localt] != lastTime2 ) 
-					outStream << lastQuantity[ it->first ];
+				printTimes.push_back( localt );
+				lastTime2 = this->time2History[localt];
 			}
 		}
+	}
 
-		if( this->time2History[localt] % period == 0 && this->time2History[localt] != lastTime2 ) 
+	// for each peptide column, walk its own (sparse) map of change-points alongside printTimes
+	// with a simple iterator advance instead of a fresh find() per row: both are sorted by t,
+	// so this is a linear merge, and each column ends up doing roughly (printTimes.size() +
+	// its own number of changes) work in total, instead of t.size() lookups regardless of
+	// whether the row is even going to be printed
+	vector<unsigned int> columnValue( statistics.size(), 0 );
+	vector< map<unsigned int, unsigned int>::const_iterator > columnIt;
+	vector< map<unsigned int, unsigned int>::const_iterator > columnEnd;
+	columnIt.reserve( statistics.size() );
+	columnEnd.reserve( statistics.size() );
+	for(map<string, map<unsigned int, unsigned int> >::iterator 	it = statistics.begin();
+									it != statistics.end();
+									it++)
+	{
+		columnIt.push_back( it->second.begin() );
+		columnEnd.push_back( it->second.end() );
+	}
+
+	for(size_t row = 0; row < printTimes.size(); row++)
+	{
+		unsigned int localt = printTimes[row];
+
+		outStream 	<< localt << ","
+				<< this->time2History[localt] << ","
+				<< this->pepsinHistory[localt];
+
+		for(size_t col = 0; col < columnIt.size(); col++)
 		{
-			// end the current line in the buffer
-			outStream << endl;
-			
-			// also, store the new value for t2
-			lastTime2 = this->time2History[localt];
+			// advance to the most recent change at or before this row's t
+			while( columnIt[col] != columnEnd[col] && columnIt[col]->first <= localt )
+			{
+				columnValue[col] = columnIt[col]->second;
+				++columnIt[col];
+			}
+
+			outStream << "," << columnValue[col];
 		}
+
+		outStream << "\n";
 	}
 
 	LOG_INFO("Writing statistics to CSV file \"" << fileName << "\"...");

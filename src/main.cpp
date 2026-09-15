@@ -38,8 +38,8 @@ void printUsage(char* programName)
 		<< OP_LOGLEVEL << " <level> ]" << endl
 		<< endl
 		<< "Input arguments:" << endl
-		<< "\t" << OP_INPUT << " <input.json>: the JSON input file with the complete description of the problem." << endl
-		<< "\t" << OP_OUTPUT << " <statistics.csv>: the CSV output file with the solution of the problem. This argument is optional, the default name is \"" << DEFAULT_OUTPUT << "\"" << endl
+		<< "\t" << OP_INPUT << " <input.json> : the JSON input file with the complete description of the problem." << endl
+		<< "\t" << OP_OUTPUT << " <statistics.csv> : the CSV output file with the solution of the problem. This argument is optional, the default name is \"" << DEFAULT_OUTPUT << "\"" << endl
 		<< "\t" << OP_VERBOSE << " : optional argument, equivalent to \"" << OP_LOGLEVEL << " debug\" on the console. By default, only info/warning/error messages are shown." << endl
 		<< "\t" << OP_LOGFILE << " <debug.log> : optional argument, also writes a full trace-level debug log to the given file. No file is created unless this is specified." << endl
 		<< "\t" << OP_LOGLEVEL << " <level> : optional argument, sets the console log level explicitly (one of: trace, debug, info, warn, error, off). Overrides " << OP_VERBOSE << " if both are given." << endl
