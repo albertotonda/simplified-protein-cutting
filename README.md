@@ -8,7 +8,7 @@ If you use this software in your publications, please cite the paper (see [Citat
 
 ## What is this software?
 
-In a nutshell, this software simulates the action of an enzyme on several copies of a protein (protein structure given in input). The model is not specific to any one enzyme: it works for any endoprotease, as long as cleavage frequency data is available for it. The enzyme's behavior is considered stochastic, and during the simulation it will cut bonds with a certain probability, depending on the amino-acids to the left and right of a bond (positions P4, P3, P2, P1, P1', P2', P3', P4'). The sample configuration shipped with this repository models pepsin, using probabilities computed from analyses performed by Hamuro et al., 2008 (DOI:10.1002/rcm.3467) and Powers et al., 1977 (DOI: 10.1007/978-1-4757-0719-9_9).
+In a nutshell, this software simulates the action of an enzyme on several copies of a protein (protein structure given in input). The model is not specific to any one enzyme: it works for any endoprotease, as long as cleavage frequency data is available for it. The enzyme's behavior is considered stochastic, and during the simulation it will cut bonds with a certain probability, depending on the amino-acids to the left and right of a bond (positions P4, P3, P2, P1, P1', P2', P3', P4'). The sample configuration shipped with this repository models pepsin, using probabilities computed from analyses performed by [Hamuro et al., 2008 (DOI:10.1002/rcm.3467)](https://pubmed.ncbi.nlm.nih.gov/18327892/) and [Powers et al., 1977 (DOI: 10.1007/978-1-4757-0719-9_9)](https://link.springer.com/chapter/10.1007/978-1-4757-0719-9_9).
 
 ## Repository structure
 
