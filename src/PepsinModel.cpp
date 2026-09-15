@@ -410,7 +410,7 @@ int PepsinModel::readJson( string fileName )
 // write the history to a file
 int PepsinModel::writeLog( string fileName )
 {
-	LOG_INFO("Pre-processing statistics...");
+	LOG_DEBUG("Pre-processing statistics...");
 
 	// trying to put some buffering, in order not to block the file for too long
 	stringstream outStream;
@@ -489,7 +489,7 @@ int PepsinModel::writeLog( string fileName )
 		outStream << "\n";
 	}
 
-	LOG_INFO("Writing statistics to CSV file \"" << fileName << "\"...");
+	LOG_DEBUG("Writing statistics to CSV file \"" << fileName << "\"...");
 	// open file
 	ofstream csvOut( fileName.c_str() );
 	if( !csvOut.is_open() )
@@ -509,7 +509,7 @@ int PepsinModel::writeLog( string fileName )
 // after initialization, here is the "true" run of the model!
 void PepsinModel::run()
 {
-	LOG_INFO(	"Starting the simulation, with maxTime=" << maxTime
+	LOG_DEBUG(	"Starting the simulation, with maxTime=" << maxTime
 			<< ", maxAttemptsPerTime=" << maxAttemptsPerTime
 			<< ", maxAttempts=" << maxAttempts
 			<< ", maxDH=" << maxDH

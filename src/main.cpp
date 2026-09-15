@@ -160,10 +160,16 @@ int main(int argc, char* argv[])
 	}
 
 	// run the model
+	LOG_INFO(	"Starting the simulation, with maxTime=" << pepsinModel.maxTime
+		<< ", maxAttemptsPerTime=" << pepsinModel.maxAttemptsPerTime
+		<< ", maxAttempts=" << pepsinModel.maxAttempts
+		<< ", maxDH=" << pepsinModel.maxDH
+		<< ", initialPepsin=" << pepsinModel.currentPepsin
+		<< ", pepsinDyingRatio=" << pepsinModel.pepsinDyingRatio );
 	pepsinModel.run();
 
 	// write statistics to file
-	LOG_INFO("Writing statistics to file \"" << csvOutputFile << "\"...");
+	LOG_INFO("Processing statistics and writing to file \"" << csvOutputFile << "\"...");
 	pepsinModel.writeLog( csvOutputFile );
 
 	// end
