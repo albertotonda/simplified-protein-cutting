@@ -15,18 +15,19 @@ In a nutshell, this software simulates the action of an enzyme on several copies
 ```
 data/                sample input (lactoferrin.json) and a small test script
 scripts/              utility scripts (e.g. the old XML -> JSON converter)
-src/                  C++ source code
-src/thirdparty/       vendored dependencies (nlohmann/json, spdlog)
+cpp/                  C++ source code (the original core, plus the future Python bindings)
+cpp/thirdparty/       vendored dependencies (nlohmann/json, spdlog)
+src/endocleave/       the Python package (in progress, see "Project status / roadmap" below)
 ```
 
-The original code is in C++, and is contained in the `src/` subfolder.
+The original code is in C++, and is contained in the `cpp/` subfolder. A Python package (`endocleave`) wrapping it via pybind11 is under active development, in `src/endocleave/` (a "src-layout" Python package, following the convention expected by Python's packaging tools — not to be confused with `cpp/`, which holds the C++ sources).
 
 ## Building the C++ code
 
-You will need [CMake](https://cmake.org/) (3.15+) and a C++17 compiler. The code has no external dependencies to install: [nlohmann/json](https://github.com/nlohmann/json) (JSON parsing) and [spdlog](https://github.com/gabime/spdlog) (logging) are vendored, header-only, directly in `src/thirdparty/`, so no network access or package manager is required at build time.
+You will need [CMake](https://cmake.org/) (3.15+) and a C++17 compiler. The code has no external dependencies to install: [nlohmann/json](https://github.com/nlohmann/json) (JSON parsing) and [spdlog](https://github.com/gabime/spdlog) (logging) are vendored, header-only, directly in `cpp/thirdparty/`, so no network access or package manager is required at build time.
 
 ```sh
-cd src
+cd cpp
 mkdir build && cd build
 cmake ..
 cmake --build .
@@ -77,7 +78,9 @@ The program produces a CSV file (`statistics.csv` by default) tracking the quant
 
 - ✅ Configuration format switched from XML to JSON.
 - ✅ Logging rewritten (leveled, quiet by default, opt-in file output) in preparation for reuse from other languages.
-- ⏳ Planned: Python bindings, packaging the core simulation as an installable Python package.
+- ✅ Model and parameter names generalized (`EndoproteaseModel`, `enzyme*` fields) — the simulation was never pepsin-specific, and now neither is its naming.
+- ✅ Repository reorganized (`cpp/` for the C++ core, `src/endocleave/` for the Python package skeleton) in preparation for packaging.
+- ⏳ In progress: pybind11 bindings and a `simulate()` convenience API, to be published as the `endocleave` Python package on PyPI.
 
 ## Citation
 
@@ -118,6 +121,6 @@ Permission to use, copy, modify, and/or distribute this software for any purpose
 
 THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-`nlohmann/json` (vendored in `src/thirdparty/nlohmann/`) is authored by Niels Lohmann and distributed under the MIT license. `spdlog` (vendored in `src/thirdparty/spdlog/`) is authored by Gabi Melman and distributed under the MIT license. The original tinyxml library (no longer used, kept out of the repository) was authored by Lee Thomason, Yves Berquin, and Andrew Ellerton.
+`nlohmann/json` (vendored in `cpp/thirdparty/nlohmann/`) is authored by Niels Lohmann and distributed under the MIT license. `spdlog` (vendored in `cpp/thirdparty/spdlog/`) is authored by Gabi Melman and distributed under the MIT license. The original tinyxml library (no longer used, kept out of the repository) was authored by Lee Thomason, Yves Berquin, and Andrew Ellerton.
 
 In case you need help, advice, or you notice a bug, please contact Alberto Tonda \<alberto.tonda@gmail.com\>.
