@@ -14,6 +14,7 @@
 #include <ctime>
 #include <sstream>
 #include <vector>
+#include <random>
 
 // local classes/libraries
 // (JSON parsing; used to be tinyxml, until the switch from XML to JSON configuration files)
@@ -83,6 +84,20 @@ PepsinModel::~PepsinModel()
 	this->statistics.clear();
 }
 
+// draw a random double in [0, 1) from this instance's own random engine
+double PepsinModel::randomUnit()
+{
+	std::uniform_real_distribution<double> distribution(0.0, 1.0);
+	return distribution( this->randomEngine );
+}
+
+// draw a random unsigned int in [0, exclusiveUpperBound) from this instance's own random engine
+unsigned int PepsinModel::randomIndex( unsigned int exclusiveUpperBound )
+{
+	std::uniform_int_distribution<unsigned int> distribution( 0, exclusiveUpperBound - 1 );
+	return distribution( this->randomEngine );
+}
+
 // read the XML file and store the relevant information 
 int PepsinModel::readJson( string fileName )
 {
@@ -145,16 +160,16 @@ int PepsinModel::readJson( string fileName )
 
 	if( randomSeed != 0 )
 	{
-		// initialize random generator with seed
+		// initialize this instance's random engine with the given seed
 		LOG_DEBUG("Initializing random generator with seed " << randomSeed);
-		srand( randomSeed );
+		this->randomEngine.seed( randomSeed );
 	}
 	else
 	{
-		// initialize random generator with t
+		// initialize this instance's random engine with the current time
 		time_t timeRandomSeed = time(NULL);
 		LOG_DEBUG("Initializing random generator with time (" << timeRandomSeed << ")");
-		srand( timeRandomSeed );
+		this->randomEngine.seed( static_cast<unsigned int>(timeRandomSeed) );
 	}
 
 	// take the proteins
@@ -574,7 +589,7 @@ void PepsinModel::run()
 		unsigned int attemptsPerTime = 0;
 
 		// before doing all the rest, just verify whether the pepsin acts
-		double randomPepsinActivation = (double) rand() / RAND_MAX;
+		double randomPepsinActivation = this->randomUnit();
 		
 		if( randomPepsinActivation < currentPepsin)
 		{
@@ -587,7 +602,7 @@ void PepsinModel::run()
 			// ok, *probably* the probability of a random protein to be chosen is 
 			// dependent on its size; so, we should probably just choose a random point in the starting protein and
 			// go over all the proteins until you find the corresponding point
-			unsigned int startingPosition = rand() % overallLength;
+			unsigned int startingPosition = this->randomIndex( overallLength );
 			
 			bool positionFound = false;
 			unsigned int proteinsIndex = 0;
@@ -633,7 +648,7 @@ void PepsinModel::run()
 				if( probability > 0.0 )
 				{
 					// random number between 0 and 1
-					double randomNumber = (double) rand() / RAND_MAX;
+					double randomNumber = this->randomUnit();
 						
 					if( randomNumber < probability )
 					{
