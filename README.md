@@ -20,13 +20,13 @@ data/                sample input (lactoferrin.json), a small test script, and a
 scripts/              utility scripts (e.g. the old XML -> JSON converter)
 cpp/                  C++ source code: the core, the CLI, and the pybind11 bindings
 cpp/thirdparty/       vendored dependencies (nlohmann/json, spdlog, pybind11_json)
-src/endocleave/       the Python package (pure-Python wrapper; the compiled
+src/seqcleave/       the Python package (pure-Python wrapper; the compiled
                       extension lands here too once built, see "Python package" below)
 tests/                pytest suite for the Python package (see "Running the tests" below)
 pyproject.toml        Python packaging config (scikit-build-core)
 ```
 
-The original code is in C++, and is contained in the `cpp/` subfolder. A Python package (`endocleave`) wrapping it via pybind11 lives in `src/endocleave/` (a "src-layout" Python package, following the convention expected by Python's packaging tools — not to be confused with `cpp/`, which holds the C++ sources).
+The original code is in C++, and is contained in the `cpp/` subfolder. A Python package (`seqcleave`) wrapping it via pybind11 lives in `src/seqcleave/` (a "src-layout" Python package, following the convention expected by Python's packaging tools — not to be confused with `cpp/`, which holds the C++ sources).
 
 ## Building the C++ code
 
@@ -82,7 +82,7 @@ The program produces a CSV file (`statistics.csv` by default) tracking the quant
 
 ## Python package
 
-The C++ core is also available from Python, as the `endocleave` package: [pybind11](https://github.com/pybind/pybind11) bindings over the same core used by the CLI, built with [scikit-build-core](https://github.com/scikit-build/scikit-build-core) so a normal `pip install` compiles everything automatically — no separate C++ build step, and no dependency on CMake or a compiler once installed.
+The C++ core is also available from Python, as the `seqcleave` package: [pybind11](https://github.com/pybind/pybind11) bindings over the same core used by the CLI, built with [scikit-build-core](https://github.com/scikit-build/scikit-build-core) so a normal `pip install` compiles everything automatically — no separate C++ build step, and no dependency on CMake or a compiler once installed.
 
 ```sh
 pip install .
@@ -91,35 +91,35 @@ pip install .
 (run from the repository root; not yet published on PyPI).
 
 ```python
-import endocleave
+import seqcleave
 
 # high-level: JSON file or dict in, a pandas.DataFrame out (same columns as the CSV above)
-df = endocleave.simulate("data/lactoferrin.json")
+df = seqcleave.simulate("data/lactoferrin.json")
 
 # optionally, also write the CSV file, same as the CLI's --output
-df = endocleave.simulate("data/lactoferrin.json", output="statistics.csv")
+df = seqcleave.simulate("data/lactoferrin.json", output="statistics.csv")
 ```
 
 Don't have a configuration handy? The bovine lactoferrin / pepsin case study from the paper ships with the package, in three forms — a ready-to-run combination, and its two halves separately (useful, for example, to try pepsin's published cleavage data against a protein of your own):
 
 ```python
-df = endocleave.simulate(endocleave.example_config())   # ready to run as-is
+df = seqcleave.simulate(seqcleave.example_config())   # ready to run as-is
 
-endocleave.lactoferrin_protein()   # -> just the "proteins" entry (sequence, disulfideBonds, quantity)
-endocleave.pepsin_cuts()           # -> just the enzyme data ("cuts", "alterations", "terminalAlterations")
+seqcleave.lactoferrin_protein()   # -> just the "proteins" entry (sequence, disulfideBonds, quantity)
+seqcleave.pepsin_cuts()           # -> just the enzyme data ("cuts", "alterations", "terminalAlterations")
 
 # e.g. pepsin's cleavage data against a different protein:
 config = {
     "parameters": {"maxDH": 0.1},
     "proteins": [{"sequence": "your own sequence here", "quantity": 100}],
-    **endocleave.pepsin_cuts(),
+    **seqcleave.pepsin_cuts(),
 }
 ```
 
 For full control, use the lower-level `EndoproteaseModel` class directly — a near 1-to-1 binding of the C++ class, with plain read/write attributes for every simulation parameter:
 
 ```python
-from endocleave import EndoproteaseModel
+from seqcleave import EndoproteaseModel
 import pandas as pd
 
 model = EndoproteaseModel()
@@ -129,10 +129,10 @@ model.run()
 df = pd.DataFrame(model.compute_time_series())
 ```
 
-Logging goes through the standard `logging` module, under the name `"endocleave"`. Verbosity is controlled with `endocleave.set_log_level(...)` rather than `logging.getLogger("endocleave").setLevel(...)` directly: the native core uses its own log level as a performance gate (deciding whether to even format a message), so the two have to stay in sync, and `set_log_level()` does that in one call.
+Logging goes through the standard `logging` module, under the name `"seqcleave"`. Verbosity is controlled with `seqcleave.set_log_level(...)` rather than `logging.getLogger("seqcleave").setLevel(...)` directly: the native core uses its own log level as a performance gate (deciding whether to even format a message), so the two have to stay in sync, and `set_log_level()` does that in one call.
 
 ```python
-endocleave.set_log_level("debug")
+seqcleave.set_log_level("debug")
 ```
 
 ### Running the tests
@@ -149,11 +149,11 @@ The suite (`tests/`) covers the Python bindings and the `simulate()`/`Endoprotea
 - ✅ Configuration format switched from XML to JSON.
 - ✅ Logging rewritten (leveled, quiet by default, opt-in file output) in preparation for reuse from other languages.
 - ✅ Model and parameter names generalized (`EndoproteaseModel`, `enzyme*` fields) — the simulation was never pepsin-specific, and now neither is its naming.
-- ✅ Repository reorganized (`cpp/` for the C++ core, `src/endocleave/` for the Python package).
+- ✅ Repository reorganized (`cpp/` for the C++ core, `src/seqcleave/` for the Python package).
 - ✅ pybind11 bindings, a `simulate()` convenience API, and a working `pip install .` (via scikit-build-core).
 - ✅ A `pytest` suite (`tests/`) covering the Python API, a fixed-seed regression check, and a seed-independent structural invariant.
 - ✅ CI (`.github/workflows/ci.yml`): builds the CLI and runs the pytest suite on Linux, macOS, and Windows on every push/PR.
-- ⏳ Planned: publish `endocleave` on PyPI, with prebuilt wheels (via `cibuildwheel`) for the common platforms.
+- ⏳ Planned: publish `seqcleave` on PyPI, with prebuilt wheels (via `cibuildwheel`) for the common platforms.
 
 ## Citation
 

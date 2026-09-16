@@ -41,7 +41,7 @@ jobs:
           test -s smoke-test.csv
           echo "Produced $(wc -l < smoke-test.csv) lines."
 
-  # Builds the endocleave Python package (pybind11 bindings + scikit-build-core, exactly as
+  # Builds the seqcleave Python package (pybind11 bindings + scikit-build-core, exactly as
   # documented in the README) and runs the pytest suite against it. The version matrix runs
   # on Linux only, to keep CI time/cost down; macOS and Windows each get one representative
   # version, mainly to catch platform- or compiler-specific build issues (this project has
@@ -74,7 +74,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Install endocleave (with test dependencies)
+      - name: Install seqcleave (with test dependencies)
         run: pip install ".[test]"
 
       - name: Run pytest

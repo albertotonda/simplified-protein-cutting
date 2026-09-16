@@ -8,11 +8,11 @@ themselves.
 import pandas as pd
 import pytest
 
-import endocleave
+import seqcleave
 
 
 def test_example_config_has_the_expected_shape():
-    config = endocleave.example_config()
+    config = seqcleave.example_config()
 
     assert set(config.keys()) == {"parameters", "proteins", "cuts", "alterations", "terminalAlterations"}
     assert len(config["proteins"]) == 1
@@ -20,11 +20,11 @@ def test_example_config_has_the_expected_shape():
 
 
 def test_example_config_runs():
-    config = endocleave.example_config()
+    config = seqcleave.example_config()
     config["proteins"][0]["quantity"] = 5
     config["parameters"]["maxDH"] = 0.02
 
-    df = endocleave.simulate(config)
+    df = seqcleave.simulate(config)
 
     assert isinstance(df, pd.DataFrame)
     assert len(df) > 0
@@ -33,7 +33,7 @@ def test_example_config_runs():
 def test_lactoferrin_protein_matches_the_readme():
     # the README states these facts about the bundled sample protein -- if this ever
     # changes, the README needs updating to match, not just this test
-    protein = endocleave.lactoferrin_protein()
+    protein = seqcleave.lactoferrin_protein()
 
     assert set(protein.keys()) == {"name", "quantity", "sequence", "disulfideBonds"}
     assert protein["name"] == "lactoferrin"
@@ -43,14 +43,14 @@ def test_lactoferrin_protein_matches_the_readme():
 
 
 def test_pepsin_cuts_has_exactly_the_enzyme_behavior_keys():
-    cuts = endocleave.pepsin_cuts()
+    cuts = seqcleave.pepsin_cuts()
 
     assert set(cuts.keys()) == {"cuts", "alterations", "terminalAlterations"}
     assert len(cuts["cuts"]) > 0
     assert len(cuts["alterations"]) > 0
 
 
-@pytest.mark.parametrize("loader", [endocleave.example_config, endocleave.lactoferrin_protein, endocleave.pepsin_cuts])
+@pytest.mark.parametrize("loader", [seqcleave.example_config, seqcleave.lactoferrin_protein, seqcleave.pepsin_cuts])
 def test_each_loader_returns_an_independent_copy_every_call(loader):
     first = loader()
     # mutate deeply, not just a top-level key, to make sure this is a real deep copy
@@ -70,20 +70,20 @@ def test_lactoferrin_protein_and_pepsin_cuts_compose_to_the_same_result_as_examp
     # the whole point of splitting these into three functions instead of one: combining the
     # two granular ones by hand must be *exactly* equivalent to the convenience function,
     # since example_config() is implemented as nothing more than that combination
-    config = endocleave.example_config()
+    config = seqcleave.example_config()
     config["parameters"]["randomSeed"] = 42
     config["proteins"][0]["quantity"] = 5
     config["parameters"]["maxDH"] = 0.05
 
     manual = {
         "parameters": dict(config["parameters"]),
-        "proteins": [endocleave.lactoferrin_protein()],
-        **endocleave.pepsin_cuts(),
+        "proteins": [seqcleave.lactoferrin_protein()],
+        **seqcleave.pepsin_cuts(),
     }
     manual["proteins"][0]["quantity"] = 5
 
-    df_from_example_config = endocleave.simulate(config)
-    df_from_manual_composition = endocleave.simulate(manual)
+    df_from_example_config = seqcleave.simulate(config)
+    df_from_manual_composition = seqcleave.simulate(manual)
 
     pd.testing.assert_frame_equal(df_from_example_config, df_from_manual_composition)
 
@@ -94,10 +94,10 @@ def test_pepsin_cuts_can_be_combined_with_a_different_protein():
     config = {
         "parameters": {"maxDH": 0.05, "randomSeed": 7},
         "proteins": [{"name": "toy", "quantity": 5, "sequence": "aprknvrwctisqpewfkcrrwqwrmkklga"}],
-        **endocleave.pepsin_cuts(),
+        **seqcleave.pepsin_cuts(),
     }
 
-    df = endocleave.simulate(config)
+    df = seqcleave.simulate(config)
 
     assert isinstance(df, pd.DataFrame)
     assert len(df) > 0

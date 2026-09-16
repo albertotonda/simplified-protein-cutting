@@ -51,7 +51,7 @@ if(MINGW)
 	target_link_options(protein-cutting PRIVATE -static)
 endif()
 
-# Python bindings (endocleave._core): optional, so the CLI above still builds standalone for
+# Python bindings (seqcleave._core): optional, so the CLI above still builds standalone for
 # anyone without a Python development environment. pybind11 itself is not vendored, unlike
 # nlohmann/json and spdlog above -- it's a normal Python *build-time* dependency, resolved
 # via "pip install pybind11" (or automatically, once packaged with scikit-build-core, from
@@ -87,17 +87,17 @@ if(pybind11_FOUND)
 	endif()
 
 	# scikit-build-core's convention: whatever is install()'d ends up in the wheel, rooted
-	# at the install prefix it sets up; installing straight into "endocleave" merges the
+	# at the install prefix it sets up; installing straight into "seqcleave" merges the
 	# compiled module into the same package directory as the pure-Python files it copies
-	# from src/endocleave/ (see pyproject.toml's [tool.scikit-build] wheel.packages).
-	install(TARGETS _core DESTINATION endocleave)
+	# from src/seqcleave/ (see pyproject.toml's [tool.scikit-build] wheel.packages).
+	install(TARGETS _core DESTINATION seqcleave)
 
-	# bundle the real sample config as package data (endocleave.example_config() etc. load
+	# bundle the real sample config as package data (seqcleave.example_config() etc. load
 	# this at runtime via importlib.resources) -- installed straight from data/lactoferrin.json
 	# at the repository root, rather than keeping a second, hand-copied file somewhere under
-	# src/endocleave/: there is exactly one lactoferrin.json in this whole repository, and
+	# src/seqcleave/: there is exactly one lactoferrin.json in this whole repository, and
 	# this is just where it also ends up in the wheel.
-	install(FILES ${PROTEIN_CUTTING_SOURCE_DIR}/../data/lactoferrin.json DESTINATION endocleave/data)
+	install(FILES ${PROTEIN_CUTTING_SOURCE_DIR}/../data/lactoferrin.json DESTINATION seqcleave/data)
 else()
 	message(STATUS "pybind11 not found: skipping the _core Python extension module (the CLI is unaffected)")
 endif()

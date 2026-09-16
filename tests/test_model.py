@@ -2,7 +2,7 @@ import os
 
 import pytest
 
-from endocleave import EndoproteaseModel
+from seqcleave import EndoproteaseModel
 
 
 def test_default_parameters_match_the_cpp_constructor():

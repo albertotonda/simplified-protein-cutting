@@ -1,9 +1,9 @@
-// pybind11 bindings for the endocleave Python package.
+// pybind11 bindings for the seqcleave Python package.
 //
 // Two design points worth explaining:
 //
 // 1. Logging is bridged into Python's own `logging` module (see PythonLoggingSink below)
-//    instead of a console/file sink, so `import endocleave` doesn't print anything on its
+//    instead of a console/file sink, so `import seqcleave` doesn't print anything on its
 //    own, and Python users configure it the normal Python way. BUT: the C++ side's log
 //    level is still the real performance gate (see Log.h's should_log() check, used by
 //    every LOG_TRACE(...)/LOG_DEBUG(...) call site) -- it has to stay in sync with whatever
@@ -53,7 +53,7 @@ namespace
 	}
 
 	// forwards every spdlog record that passes the level check (see should_log() in Log.h)
-	// into Python's logging.getLogger("endocleave")
+	// into Python's logging.getLogger("seqcleave")
 	class PythonLoggingSink : public spdlog::sinks::base_sink<std::mutex>
 	{
 	public:
@@ -97,17 +97,17 @@ namespace
 
 PYBIND11_MODULE(_core, m)
 {
-	m.doc() = "endocleave native extension: pybind11 bindings for the C++ endoprotease simulation core";
+	m.doc() = "seqcleave native extension: pybind11 bindings for the C++ endoprotease simulation core";
 
 	auto pySink = std::make_shared<PythonLoggingSink>();
 	logging::setSinks( { pySink } );
 
-	// matches the CLI's own default verbosity; call endocleave.set_log_level(...) to change it
+	// matches the CLI's own default verbosity; call seqcleave.set_log_level(...) to change it
 	setLogLevel( "info" );
 
 	m.def( "set_log_level", &setLogLevel, py::arg("level"),
 		"Set the log level (\"trace\", \"debug\", \"info\", \"warning\", \"error\", or \"off\"), "
-		"for both the native core and Python's logging.getLogger(\"endocleave\"). Use this "
+		"for both the native core and Python's logging.getLogger(\"seqcleave\"). Use this "
 		"instead of calling logger.setLevel(...) directly: the native core relies on its own "
 		"level to decide whether to even format a message, for performance, so the two must "
 		"stay in sync." );
