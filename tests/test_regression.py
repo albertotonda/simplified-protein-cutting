@@ -39,12 +39,19 @@ def test_time_and_time2_are_non_decreasing(lactoferrin_config):
 def test_fixed_seed_reproduces_known_values(lactoferrin_config):
     # captured from an actual run of this exact fixture (quantity=5, randomSeed=42,
     # maxDH=0.05) -- if this ever changes, either something genuinely regressed, or the
-    # change was intentional and these constants need updating to match
+    # change was intentional and these constants need updating to match.
+    #
+    # NOTE: this is only meaningful *because* EndoproteaseModel::randomUnit()/randomIndex()
+    # deliberately avoid std::uniform_real_distribution/uniform_int_distribution (see their
+    # comments in EndoproteaseModel.cpp) -- those are built on a portable engine
+    # (std::mt19937) but are themselves only implementation-defined, so libstdc++ (Linux,
+    # MinGW) and libc++ (macOS/Clang) silently produced different results from the exact
+    # same seed. Found via this very test failing in CI on macOS but not Linux/Windows.
     df = endocleave.simulate(lactoferrin_config)
 
-    assert df.shape == (18, 328)
+    assert df.shape == (18, 327)
 
     last_row = df.iloc[-1]
-    assert last_row["time"] == 1949
+    assert last_row["time"] == 1927
     assert last_row["time2"] == 170
     assert last_row["enzyme"] == 1.0
