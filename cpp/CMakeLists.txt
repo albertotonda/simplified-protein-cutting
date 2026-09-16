@@ -91,6 +91,13 @@ if(pybind11_FOUND)
 	# compiled module into the same package directory as the pure-Python files it copies
 	# from src/endocleave/ (see pyproject.toml's [tool.scikit-build] wheel.packages).
 	install(TARGETS _core DESTINATION endocleave)
+
+	# bundle the real sample config as package data (endocleave.example_config() etc. load
+	# this at runtime via importlib.resources) -- installed straight from data/lactoferrin.json
+	# at the repository root, rather than keeping a second, hand-copied file somewhere under
+	# src/endocleave/: there is exactly one lactoferrin.json in this whole repository, and
+	# this is just where it also ends up in the wheel.
+	install(FILES ${PROTEIN_CUTTING_SOURCE_DIR}/../data/lactoferrin.json DESTINATION endocleave/data)
 else()
 	message(STATUS "pybind11 not found: skipping the _core Python extension module (the CLI is unaffected)")
 endif()
