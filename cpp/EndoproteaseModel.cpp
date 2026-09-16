@@ -85,17 +85,27 @@ EndoproteaseModel::~EndoproteaseModel()
 }
 
 // draw a random double in [0, 1) from this instance's own random engine
+//
+// NOTE: deliberately not std::uniform_real_distribution. std::mt19937 itself is fully
+// specified by the standard (same output, same seed, on every platform/compiler), but the
+// *distributions* built on top of an engine are only implementation-defined -- libstdc++
+// (Linux, MinGW) and libc++ (macOS/Clang) map the same engine output to different final
+// values. Found via CI: a fixed-seed regression test matched on Linux (MinGW and Linux GCC
+// both use libstdc++) but produced a different-shaped result on macOS. Computing the [0,1)
+// mapping by hand, directly from the engine's own (portable) min()/max()/operator()(), keeps
+// this fully portable across standard library implementations too, not just across
+// platforms that happen to share one.
 double EndoproteaseModel::randomUnit()
 {
-	std::uniform_real_distribution<double> distribution(0.0, 1.0);
-	return distribution( this->randomEngine );
+	double range = static_cast<double>( randomEngine.max() - randomEngine.min() ) + 1.0;
+	return static_cast<double>( randomEngine() - randomEngine.min() ) / range;
 }
 
-// draw a random unsigned int in [0, exclusiveUpperBound) from this instance's own random engine
+// draw a random unsigned int in [0, exclusiveUpperBound) from this instance's own random
+// engine; see randomUnit() above for why this doesn't use std::uniform_int_distribution
 unsigned int EndoproteaseModel::randomIndex( unsigned int exclusiveUpperBound )
 {
-	std::uniform_int_distribution<unsigned int> distribution( 0, exclusiveUpperBound - 1 );
-	return distribution( this->randomEngine );
+	return static_cast<unsigned int>( randomUnit() * exclusiveUpperBound );
 }
 
 // read a JSON configuration file from disk, then hand off to readJsonObject() below.

@@ -4,6 +4,14 @@ project(PROTEIN_CUTTING CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+if(MSVC)
+	# spdlog bundles fmt, which refuses to compile under MSVC at all without this: a
+	# static_assert enforces the choice explicitly rather than silently assuming the wrong
+	# source/execution character set. Found by CI (this project has no MSVC build locally
+	# to catch it against) -- GCC/Clang default to UTF-8 and never needed this flag.
+	add_compile_options(/utf-8)
+endif()
+
 # nlohmann/json is vendored as a single header under thirdparty/, so no
 # network access or package manager is required to build (config parsing
 # used to be done with tinyxml, also vendored in-tree, until the switch to JSON)
@@ -30,6 +38,19 @@ set_target_properties(protein-cutting-core PROPERTIES POSITION_INDEPENDENT_CODE 
 add_executable(protein-cutting main.cpp)
 target_link_libraries(protein-cutting PRIVATE protein-cutting-core)
 
+if(MINGW)
+	# statically link the MinGW runtime into the CLI too, for the same reason as the Python
+	# module below: a dynamically-linked binary depends on libstdc++/libgcc/libwinpthread as
+	# external DLLs, resolved via the OS's normal DLL search order at startup -- which is a
+	# real problem the moment more than one MinGW toolchain exists on the same machine (e.g.
+	# Git for Windows bundles its own MinGW64, alongside a separately installed one): if a
+	# *different*, ABI-incompatible libstdc++-6.dll is found first, the result is a silent,
+	# hard-to-diagnose crash inside the C++ standard library at runtime, in code that
+	# compiled and linked without any error. Static linking removes the dependency (and
+	# hence the ambiguity) entirely.
+	target_link_options(protein-cutting PRIVATE -static)
+endif()
+
 # Python bindings (endocleave._core): optional, so the CLI above still builds standalone for
 # anyone without a Python development environment. pybind11 itself is not vendored, unlike
 # nlohmann/json and spdlog above -- it's a normal Python *build-time* dependency, resolved
@@ -45,14 +66,13 @@ if(Python_FOUND AND pybind11_FOUND)
 	target_include_directories(_core PRIVATE ${PROTEIN_CUTTING_SOURCE_DIR}/thirdparty/pybind11_json)
 
 	if(MINGW)
-		# statically link the MinGW runtime (libgcc/libstdc++/libwinpthread) into the module.
-		# Without this, the module depends on those as external DLLs -- fine for the CLI
-		# executable (built and run in the same MinGW shell where they're on PATH), but not
-		# for a Python extension: since Python 3.8, the interpreter no longer searches PATH
-		# for an extension module's DLL dependencies (a deliberate security hardening), so
-		# importing the module would fail with a bare "DLL load failed" unless every consumer
-		# manually called os.add_dll_directory(...). Static linking sidesteps this (and is
-		# also what's needed for a redistributable wheel later).
+		# see the CLI target above for the general reason (avoiding a possible mismatched
+		# libstdc++-6.dll at runtime); on top of that, a Python extension module has its own,
+		# stricter problem: since Python 3.8, the interpreter no longer searches PATH for an
+		# extension module's DLL dependencies at all (a deliberate security hardening), so
+		# importing the module would fail outright with a bare "DLL load failed" unless every
+		# consumer manually called os.add_dll_directory(...). Static linking sidesteps both
+		# issues at once (and is also what's needed for a redistributable wheel later).
 		target_link_options(_core PRIVATE -static)
 	endif()
 

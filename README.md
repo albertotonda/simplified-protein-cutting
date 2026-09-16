@@ -1,5 +1,7 @@
 # Simplified in-silico protein cutting
 
+[![CI](https://github.com/albertotonda/simplified-protein-cutting/actions/workflows/ci.yml/badge.svg)](https://github.com/albertotonda/simplified-protein-cutting/actions/workflows/ci.yml)
+
 Modeling protein hydrolysis and release of peptides by endoproteases requires complex simulations, typically taking into account the 3D structure of both the enzymes and the target protein. Such structures can sometimes be difficult to predict starting from the protein's acido-aminic sequence.
 
 This repository contains the code for an alternative approach, published in [Tonda et al. (2017), _In silico modeling of protein hydrolysis by endoproteases: a case study on pepsin digestion of bovine lactoferrin_, Food & Function, Vol. 8, Issue 12, DOI: 10.1039/C7FO00830A](https://pubs.rsc.org/fo/article-abstract/8/12/4404/566726/In-silico-modeling-of-protein-hydrolysis-by). The idea is to just consider the linear sequence of amino-acids, and then simulate the behavior of an enzyme starting from the frequency of cuts observed during previous experiments. The final peptides obtained by the simulation are qualitatively coherent with real-world experiments, even though the exact absolute quantities might be different.
@@ -13,7 +15,8 @@ In a nutshell, this software simulates the action of an enzyme on several copies
 ## Repository structure
 
 ```
-data/                sample input (lactoferrin.json) and a small test script
+data/                sample input (lactoferrin.json), a small test script, and a
+                      scaled-down variant used for quick smoke tests / CI
 scripts/              utility scripts (e.g. the old XML -> JSON converter)
 cpp/                  C++ source code: the core, the CLI, and the pybind11 bindings
 cpp/thirdparty/       vendored dependencies (nlohmann/json, spdlog, pybind11_json)
@@ -133,7 +136,8 @@ The suite (`tests/`) covers the Python bindings and the `simulate()`/`Endoprotea
 - ✅ Repository reorganized (`cpp/` for the C++ core, `src/endocleave/` for the Python package).
 - ✅ pybind11 bindings, a `simulate()` convenience API, and a working `pip install .` (via scikit-build-core).
 - ✅ A `pytest` suite (`tests/`) covering the Python API, a fixed-seed regression check, and a seed-independent structural invariant.
-- ⏳ Planned: CI (build + test on Linux/macOS/Windows), then publish `endocleave` on PyPI with prebuilt wheels (via `cibuildwheel`) for the common platforms.
+- ✅ CI (`.github/workflows/ci.yml`): builds the CLI and runs the pytest suite on Linux, macOS, and Windows on every push/PR.
+- ⏳ Planned: publish `endocleave` on PyPI, with prebuilt wheels (via `cibuildwheel`) for the common platforms.
 
 ## Citation
 
