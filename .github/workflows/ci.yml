@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch: {}
+
+jobs:
+  # Builds the plain C++ CLI, standalone (no Python involved at all) -- this is the "does the
+  # core still compile and run" signal, cheap and fast, on all three platforms.
+  build-cli:
+    name: Build CLI (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Ninja via pip rather than an OS package manager: one install method, works the same
+      # way on all three runner OSes, no need to special-case apt/brew/choco.
+      - name: Install Ninja
+        run: pip install ninja
+
+      - name: Configure
+        run: cmake -S cpp -B cpp/build -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build cpp/build
+
+      - name: Smoke test
+        shell: bash
+        run: |
+          bin=cpp/build/protein-cutting
+          [ -f "$bin.exe" ] && bin="$bin.exe"
+          "$bin" --input data/lactoferrin-quicktest.json --output smoke-test.csv
+          test -s smoke-test.csv
+          echo "Produced $(wc -l < smoke-test.csv) lines."
+
+  # Builds the endocleave Python package (pybind11 bindings + scikit-build-core, exactly as
+  # documented in the README) and runs the pytest suite against it. The version matrix runs
+  # on Linux only, to keep CI time/cost down; macOS and Windows each get one representative
+  # version, mainly to catch platform- or compiler-specific build issues (this project has
+  # so far only ever been compiled with GCC/MinGW locally -- windows-latest defaults to
+  # MSVC, so this is also this project's first real MSVC compile).
+  test-python:
+    name: Test Python package (${{ matrix.os }}, Python ${{ matrix.python-version }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            python-version: "3.9"
+          - os: ubuntu-latest
+            python-version: "3.10"
+          - os: ubuntu-latest
+            python-version: "3.11"
+          - os: ubuntu-latest
+            python-version: "3.12"
+          - os: macos-latest
+            python-version: "3.11"
+          - os: windows-latest
+            python-version: "3.11"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install endocleave (with test dependencies)
+        run: pip install ".[test]"
+
+      - name: Run pytest
+        run: pytest -v

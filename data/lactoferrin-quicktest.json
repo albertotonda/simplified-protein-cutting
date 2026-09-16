@@ -1,0 +1,95 @@
+// Small, fast, deterministic variant of lactoferrin.json (quantity=5, fixed seed, tight maxDH),
+// used for quick smoke-testing (CI, or a fast local sanity check) rather than real analysis.
+// Configuration for the protein-cutting simulator (JSON format, replaces the old XML format).
+// Comments (// and /* */) are supported by the loader and stripped before parsing.
+{
+	// === Simulation parameters ===
+	"parameters": {
+		// set to a number to get reproducible runs; null = seed from current time
+		"randomSeed": 42,
+		// stop condition: stop after maximum number of iterations reached
+		"maxTime": 1200000,
+		// stop condition: stop after reaching the given degree of hydrolysis (DH)
+		"maxDH": 0.02,
+		// how many attempts to cut should the simulated enzyme perform, per iteration
+		"maxAttemptsPerTime": 1,
+		// stop condition: stop after failing this many consecutive attempts to cut
+		"maxAttempts": 1000,
+
+		// THE FOLLOWING THREE ARE EXPERIMENTAL, ADVISE NOT TO MODIFY THEM
+		// the enzyme 'dies out' during the process, so it is more effective at the beginning; we thought it could be
+		// interesting to have the enzyme reduce its probability of activation during time, but the code is not ready
+		"initialEnzyme": 1.0,
+		"enzymeAlwaysDying": false,
+		"enzymeDyingRatio": 1.0
+	},
+
+	// here you can define multiple proteins, each with a number of copies ("quantity").
+	// "disulfideBonds" lists 1-indexed positions in the sequence that the enzyme finds harder to cut
+	// (not all of them are disulfide bonds, some are glycosylations)
+	"proteins": [
+		{
+			"name": "lactoferrin",
+			"quantity": 5,
+			"disulfideBonds": [9, 19, 36, 45, 115, 157, 170, 173, 181, 198, 231, 245, 348, 358, 371, 380, 405, 425, 457, 481, 491, 502, 505, 515, 532, 573, 587, 625, 630, 647, 675, 684, 233, 368, 476, 545],
+			"sequence": "aprknvrwctisqpewfkcrrwqwrmkklgapsitcvrrafaleciraiaekkadavtldggmvfeagrdpyklrpvaaeiygtkespqthyyavavvkkgsnfqldqlqgrkschtglgrsagwiipmgilrpylswtesleplqgavakffsascvpcidrqaypnlcqlckgegenqcacssrepyfgysgafkclqdgagdvafvkettvfenlpekadrdqyellclnnsrapvdafkechlaqvpshavvarsvdgkedliwkllskaqekfgknksrsfqlfgsppgqrdllfkdsalgflripskvdsalylgsrylttlknlretaeevkarytrvvwcavgpeeqkkcqqwsqqsgqnvtcatasttddcivlvlkgeadalnldggyiytagkcglvpvlaenrktskhssldcvlrptegylavavvkkanegltwnslkdkkschtavdrtagwnipmglivnqtgscafdeffsqscapgadpksrlcalcagddqgldkcvpnskekyygytgafrclaedvgdvafvkndtvwentngestadwaknlnredfrllcldgtrkpvteaqschlavapnhavvsrsdraahvkqvllhqqalfgkngkncpdkfclfksetknllfndnteclaklggrptyeeylgteyvtaianlkkcstsplleacafltr"
+		}
+	],
+
+	// basic probabilities of cutting a bond, depending on the aminoacids in position P1 (left) / P1' (right);
+	// probabilities here are taken from Hamuro et al., 2008.
+	// NOTE: entries with probability 0 are omitted (a missing right-aminoacid means probability 0),
+	// matching the original loader, which only stored cuts with probability > 0.
+	"cuts": {
+		"f": { "y": 0.65, "f": 0.85, "w": 0.6, "i": 0.65, "m": 0.83, "v": 0.5, "l": 0.64, "c": 0.2, "a": 0.55, "e": 0.42, "d": 0.44, "r": 0.42, "n": 0.42, "s": 0.52, "t": 0.31, "h": 0.43, "k": 0.47, "q": 0.33, "p": 0.17, "g": 0.28 },
+		"l": { "y": 0.68, "f": 0.84, "w": 0.6, "i": 0.63, "m": 0.58, "v": 0.53, "l": 0.56, "c": 0.54, "a": 0.54, "e": 0.45, "d": 0.46, "r": 0.34, "n": 0.45, "s": 0.42, "t": 0.27, "h": 0.33, "k": 0.33, "q": 0.26, "p": 0.24, "g": 0.07 },
+		"m": { "y": 0.3, "f": 0.64, "w": 0.5, "i": 0.62, "m": 0.42, "v": 0.61, "l": 0.66, "a": 0.38, "e": 0.29, "d": 0.38, "r": 0.26, "n": 0.07, "s": 0.22, "t": 0.25, "h": 0.29, "k": 0.32, "q": 0.17, "p": 0.18, "g": 0.08 },
+		"c": { "y": 0.25, "f": 0.75, "w": 0.57, "i": 0.4, "v": 0.21, "l": 0.36, "c": 0.5, "a": 0.18, "e": 0.2, "r": 0.29, "t": 0.35, "h": 0.17, "p": 0.2, "g": 0.06 },
+		"e": { "y": 0.7, "f": 0.53, "w": 0.63, "i": 0.36, "m": 0.29, "v": 0.31, "l": 0.21, "c": 0.36, "a": 0.35, "e": 0.09, "d": 0.11, "r": 0.09, "n": 0.13, "s": 0.04, "t": 0.03, "h": 0.06, "k": 0.12, "q": 0.11, "p": 0.08, "g": 0.01 },
+		"w": { "y": 0.71, "f": 0.4, "i": 0.15, "m": 0.33, "v": 0.1, "l": 0.29, "c": 0.22, "a": 0.08, "e": 0.24, "d": 0.21, "r": 0.13, "s": 0.06, "t": 0.29, "k": 0.13 },
+		"y": { "y": 0.36, "f": 0.33, "w": 0.5, "i": 0.2, "m": 0.25, "v": 0.16, "l": 0.25, "a": 0.09, "e": 0.19, "d": 0.17, "r": 0.16, "n": 0.11, "s": 0.14, "t": 0.04, "h": 0.1, "q": 0.2, "p": 0.06, "g": 0.1 },
+		"d": { "y": 0.48, "f": 0.37, "w": 0.17, "i": 0.42, "m": 0.2, "v": 0.25, "l": 0.12, "c": 0.33, "a": 0.13, "e": 0.06, "d": 0.05, "r": 0.09, "s": 0.02, "t": 0.12, "h": 0.15, "k": 0.02 },
+		"a": { "y": 0.48, "f": 0.38, "w": 0.17, "i": 0.3, "m": 0.3, "v": 0.28, "l": 0.16, "c": 0.06, "a": 0.14, "e": 0.06, "d": 0.05, "r": 0.08, "n": 0.04, "s": 0.05, "t": 0.05, "h": 0.22, "k": 0.03, "p": 0.05 },
+		"q": { "y": 0.47, "f": 0.24, "w": 0.33, "i": 0.4, "m": 0.2, "v": 0.23, "l": 0.07, "c": 0.33, "a": 0.07, "e": 0.02, "r": 0.06, "n": 0.05, "t": 0.03, "h": 0.15, "k": 0.03 },
+		"n": { "y": 0.39, "f": 0.28, "w": 0.38, "i": 0.25, "v": 0.16, "l": 0.04, "c": 0.25, "a": 0.09, "d": 0.05, "r": 0.04, "t": 0.06 },
+		"t": { "y": 0.23, "f": 0.21, "w": 0.17, "i": 0.18, "m": 0.11, "v": 0.11, "l": 0.08, "a": 0.07, "d": 0.02, "s": 0.05, "t": 0.09, "h": 0.11, "k": 0.04 },
+		"s": { "y": 0.31, "f": 0.05, "w": 0.23, "i": 0.13, "v": 0.12, "l": 0.04, "c": 0.2, "a": 0.06, "e": 0.04, "d": 0.02, "r": 0.05, "n": 0.04, "s": 0.02, "t": 0.03, "h": 0.03, "p": 0.02 },
+		"g": { "y": 0.17, "f": 0.09, "w": 0.17, "i": 0.09, "m": 0.11, "l": 0.13, "c": 0.12, "a": 0.04, "d": 0.04, "r": 0.03, "t": 0.02, "k": 0.02 },
+		"v": { "y": 0.11, "f": 0.08, "w": 0.24, "i": 0.09, "m": 0.06, "v": 0.04, "l": 0.07, "a": 0.03, "e": 0.04, "s": 0.03, "p": 0.11 },
+		"i": { "y": 0.07, "f": 0.08, "w": 0.3, "v": 0.02, "l": 0.01, "c": 0.18, "a": 0.02, "e": 0.06, "k": 0.02, "p": 0.02 },
+		"k": { "i": 0.02, "g": 0.02 },
+		"h": { "p": 0.05 }
+	},
+
+	// position-dependent adjustments to the base cut probability, for aminoacids found in
+	// positions P2-P4 (left) / P2'-P4' (right); data taken from Powers et al., 1977
+	"alterations": {
+		"f": { "left": { "2": 0.068, "3": 0.065, "4": 0.178 }, "right": { "2": 0.076, "3": 0.138, "4": 0.138 } },
+		"l": { "left": { "2": 0.111, "3": 0.153, "4": 0.12 }, "right": { "2": 0.109, "3": 0.173, "4": 0.147 } },
+		"m": { "left": { "2": 0.122, "3": 0.213, "4": 0.127 }, "right": { "2": 0.122, "3": 0.198, "4": 0.141 } },
+		"c": { "left": { "2": 0.201, "3": 0.207, "4": 0.108 }, "right": { "2": 0.121, "3": 0.131, "4": 0.165 } },
+		"e": { "left": { "2": 0.191, "3": 0.147, "4": 0.127 }, "right": { "2": 0.179, "3": 0.149, "4": 0.112 } },
+		"w": { "left": { "2": 0.051, "3": 0.092, "4": 0.158 }, "right": { "2": 0.116, "3": 0.152, "4": 0.152 } },
+		"y": { "left": { "2": 0.086, "3": 0.071, "4": 0.178 }, "right": { "2": 0.137, "3": 0.131, "4": 0.157 } },
+		"d": { "left": { "2": 0.175, "3": 0.123, "4": 0.167 }, "right": { "2": 0.118, "3": 0.117, "4": 0.131 } },
+		"a": { "left": { "2": 0.166, "3": 0.195, "4": 0.118 }, "right": { "2": 0.175, "3": 0.1, "4": 0.116 } },
+		"q": { "left": { "2": 0.154, "3": 0.121, "4": 0.118 }, "right": { "2": 0.127, "3": 0.146, "4": 0.129 } },
+		"n": { "left": { "2": 0.217, "3": 0.099, "4": 0.142 }, "right": { "2": 0.085, "3": 0.115, "4": 0.143 } },
+		"t": { "left": { "2": 0.142, "3": 0.189, "4": 0.146 }, "right": { "2": 0.156, "3": 0.145, "4": 0.11 } },
+		"s": { "left": { "2": 0.184, "3": 0.195, "4": 0.114 }, "right": { "2": 0.176, "3": 0.125, "4": 0.135 } },
+		"g": { "left": { "2": 0.094, "3": 0.191, "4": 0.131 }, "right": { "2": 0.082, "3": 0.073, "4": 0.151 } },
+		"v": { "left": { "2": 0.181, "3": 0.177, "4": 0.13 }, "right": { "2": 0.221, "3": 0.174, "4": 0.12 } },
+		"i": { "left": { "2": 0.172, "3": 0.19, "4": 0.132 }, "right": { "2": 0.183, "3": 0.202, "4": 0.128 } },
+		"k": { "left": { "2": 0.11, "3": 0.016, "4": 0.127 }, "right": { "2": 0.143, "3": 0.17, "4": 0.127 } },
+		"h": { "left": { "2": 0.077, "3": 0.017, "4": 0.117 }, "right": { "2": 0.026, "3": 0.091, "4": 0.115 } },
+		"r": { "left": { "2": 0.133, "3": 0.012, "4": 0.133 }, "right": { "2": 0.211, "3": 0.153, "4": 0.139 } },
+		"p": { "left": { "2": 0.002, "3": 0.137, "4": 0.194 }, "right": { "2": 0.013, "3": 0.027, "4": 0.207 } }
+	},
+
+	// multipliers applied to the cut probability when close to either end of a peptide chain;
+	// data taken from Powers et al., 1977
+	"terminalAlterations": {
+		"left": { "2": 0.3333, "3": 0.3333 },
+		"right": { "2": 0.3333, "3": 0.3333 }
+	}
+}
