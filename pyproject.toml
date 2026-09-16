@@ -4,10 +4,11 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "endocleave"
-version = "0.1.0.dev0"
+version = "0.1.0"
 description = "Stochastic simulation of protein hydrolysis by endoproteases, from cleavage-frequency data"
 readme = "README.md"
-license = { text = "ISC" }
+license = "ISC"
+license-files = ["LICENSE"]
 authors = [
     { name = "Alberto Tonda", email = "alberto.tonda@gmail.com" },
 ]
@@ -16,7 +17,6 @@ keywords = ["protein", "peptide", "endoprotease", "proteolysis", "hydrolysis", "
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: ISC License (ISCL)",
     "Programming Language :: C++",
     "Programming Language :: Python :: 3",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
@@ -43,3 +43,14 @@ wheel.packages = ["src/endocleave"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.cibuildwheel]
+# Python 3.9-3.12, 64-bit only: musllinux (Alpine) and 32-bit builds are skipped to keep
+# the release matrix manageable; can be widened later without any other changes needed.
+build = "cp39-* cp310-* cp311-* cp312-*"
+skip = "*-musllinux* *_i686 *-win32"
+build-verbosity = 1
+# actually import and run the built wheel (not just "did it build") for every single wheel,
+# on every platform, right after building it -- this is exactly the kind of check that would
+# have caught the MinGW-DLL-dependency issue found earlier, automatically, for free
+test-command = "python -c \"import endocleave; df = endocleave.simulate({'parameters': {'maxDH': 0.05, 'randomSeed': 1}, 'proteins': [{'quantity': 3, 'sequence': 'aaffaa'}], 'cuts': {'f': {'f': 1.0}}}); assert len(df) > 0; print('endocleave', endocleave.__version__, 'OK:', df.shape)\""
