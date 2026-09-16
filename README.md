@@ -12,7 +12,97 @@ If you use this software in your publications, please cite the paper (see [Citat
 
 In a nutshell, this software simulates the action of an enzyme on several copies of a protein (protein structure given in input). The model is not specific to any one enzyme: it works for any endoprotease, as long as cleavage frequency data is available for it. The enzyme's behavior is considered stochastic, and during the simulation it will cut bonds with a certain probability, depending on the amino-acids to the left and right of a bond (positions P4, P3, P2, P1, P1', P2', P3', P4'). The sample configuration shipped with this repository models pepsin, using probabilities computed from analyses performed by [Hamuro et al., 2008](https://pubmed.ncbi.nlm.nih.gov/18327892/) and [Powers et al., 1977](https://link.springer.com/chapter/10.1007/978-1-4757-0719-9_9).
 
-## Repository structure
+Most people will want the **Python package**, described next. The C++ core, CLI, and file formats behind it are documented further down, in [C++ core](#c-core).
+
+## Python package
+
+The C++ core is available from Python as the `seqcleave` package: [pybind11](https://github.com/pybind/pybind11) bindings over the same core used by the CLI, built with [scikit-build-core](https://github.com/scikit-build/scikit-build-core) so a normal `pip install` compiles everything automatically — no separate C++ build step, and no dependency on CMake or a compiler once installed.
+
+```sh
+pip install .
+```
+
+(run from the repository root; not yet published on PyPI).
+
+```python
+import seqcleave
+
+# high-level: JSON file or dict in, a pandas.DataFrame out (same columns as the CSV described
+# in "Output format" below)
+df = seqcleave.simulate("data/lactoferrin.json")
+
+# optionally, also write the CSV file, same as the CLI's --output
+df = seqcleave.simulate("data/lactoferrin.json", output="statistics.csv")
+```
+
+Don't have a configuration handy? The bovine lactoferrin / pepsin case study from the paper ships with the package, in three forms — a ready-to-run combination, and its two halves separately (useful, for example, to try pepsin's published cleavage data against a protein of your own):
+
+```python
+df = seqcleave.simulate(seqcleave.example_config())   # ready to run as-is
+
+seqcleave.lactoferrin_protein()   # -> just the "proteins" entry (sequence, disulfideBonds, quantity)
+seqcleave.pepsin_cuts()           # -> just the enzyme data ("cuts", "alterations", "terminalAlterations")
+
+# e.g. pepsin's cleavage data against a different protein:
+config = {
+    "parameters": {"maxDH": 0.1},
+    "proteins": [{"sequence": "your own sequence here", "quantity": 100}],
+    **seqcleave.pepsin_cuts(),
+}
+```
+
+See [Configuration format (JSON)](#configuration-format-json) below for the full schema `simulate()` accepts (as a dict or a file path).
+
+For full control, use the lower-level `EndoproteaseModel` class directly — a near 1-to-1 binding of the C++ class, with plain read/write attributes for every simulation parameter:
+
+```python
+from seqcleave import EndoproteaseModel
+import pandas as pd
+
+model = EndoproteaseModel()
+model.read_json("data/lactoferrin.json")   # or model.read_config({...}) for a native dict
+model.max_dh = 0.05
+model.run()
+df = pd.DataFrame(model.compute_time_series())
+```
+
+Logging goes through the standard `logging` module, under the name `"seqcleave"`. Verbosity is controlled with `seqcleave.set_log_level(...)` rather than `logging.getLogger("seqcleave").setLevel(...)` directly: the native core uses its own log level as a performance gate (deciding whether to even format a message), so the two have to stay in sync, and `set_log_level()` does that in one call.
+
+```python
+seqcleave.set_log_level("debug")
+```
+
+### Running the tests
+
+```sh
+pip install -e ".[test]"
+pytest
+```
+
+The suite (`tests/`) covers the Python bindings and the `simulate()`/`EndoproteaseModel` API: a fixed-seed regression check (meaningful and portable across platforms, since the random engine is `std::mt19937`, a standardized algorithm), a mass-balance invariant (every cut turns one peptide into two, so the total peptide count must always equal the original quantity plus the number of cuts so far — true for any config or seed), and error handling for malformed input.
+
+## Configuration format (JSON)
+
+Simulations — whether run through the Python package or the CLI — are configured entirely from a JSON file or dict, no need to modify the source code to change the protein(s), probabilities, or simulation parameters. Comments (`//` and `/* */`) are supported by the loader and stripped before parsing, so configuration files can be annotated just like code; `data/lactoferrin.json` is heavily commented and is the best starting point for writing your own.
+
+The file has four top-level sections:
+
+- **`parameters`**: simulation-wide settings — `randomSeed` (`null` for a time-based seed), `maxTime` (max iterations), `maxDH` (stop once this degree of hydrolysis is reached), `maxAttemptsPerTime`, `maxAttempts` (stop after this many consecutive failed cut attempts), and the experimental `initialEnzyme` / `enzymeAlwaysDying` / `enzymeDyingRatio` (enzyme activity decaying over time).
+- **`proteins`**: an array of proteins to simulate, each with a `name`, a `quantity` (number of copies), a `sequence` (the amino-acid chain), and `disulfideBonds` (1-indexed positions the enzyme finds harder to cut — not all of them are strictly disulfide bonds, some are glycosylations).
+- **`cuts`**: base probability of cutting a bond, keyed by the amino-acid to the left (P1) and right (P1') of the bond, e.g. `"cuts": { "f": { "y": 0.65, "f": 0.85, ... }, ... }`. Bonds not listed default to probability 0.
+- **`alterations`** / **`terminalAlterations`**: position-dependent adjustments to the base probability for amino-acids found further away from the bond (P2-P4 / P2'-P4'), and multipliers applied near either end of a peptide chain.
+
+Until 2026, configuration files were XML, parsed with the [tinyxml](http://www.grinninglizard.com/tinyxml/) library; the format was switched to JSON (parsed with nlohmann/json) for easier editing and future Python bindings. The original sample file, `data/lactoferrin.xml`, is kept in the repository as a historical reference — it is no longer read by the code. The one-off script used for the conversion, `scripts/xml_to_json.py`, is kept for reference in case other old XML configuration files need migrating.
+
+## Output format
+
+Both the CLI and `seqcleave.simulate()` produce the same tabular result — a CSV file (`statistics.csv` by default) or, in Python, a `pandas.DataFrame` — tracking the quantity of each peptide over the course of the simulation. Columns are `time` (iteration count), `time2` (number of cuts so far), `enzyme` (currently always 1.0, reserved for future developments), followed by one column per distinct peptide produced during the simulation, in alphabetical order. Each row gives the count of each peptide at that point in the simulation. The full CSV is usually large (~70 MB for the lactoferrin example); extracting meaningful information from it typically requires a separate analysis script rather than manual inspection.
+
+## C++ core
+
+The Python package wraps a C++ core, which can also be built and run standalone as a CLI. This section is for building from source or working on the C++ code directly — most users won't need it.
+
+### Repository structure
 
 ```
 data/                sample input (lactoferrin.json), a small test script, and a
@@ -20,15 +110,15 @@ data/                sample input (lactoferrin.json), a small test script, and a
 scripts/              utility scripts (e.g. the old XML -> JSON converter)
 cpp/                  C++ source code: the core, the CLI, and the pybind11 bindings
 cpp/thirdparty/       vendored dependencies (nlohmann/json, spdlog, pybind11_json)
-src/endocleave/       the Python package (pure-Python wrapper; the compiled
-                      extension lands here too once built, see "Python package" below)
-tests/                pytest suite for the Python package (see "Running the tests" below)
+src/seqcleave/       the Python package (pure-Python wrapper; the compiled
+                      extension lands here too once built, see "Python package" above)
+tests/                pytest suite for the Python package (see "Running the tests" above)
 pyproject.toml        Python packaging config (scikit-build-core)
 ```
 
-The original code is in C++, and is contained in the `cpp/` subfolder. A Python package (`endocleave`) wrapping it via pybind11 lives in `src/endocleave/` (a "src-layout" Python package, following the convention expected by Python's packaging tools — not to be confused with `cpp/`, which holds the C++ sources).
+The original code is in C++, and is contained in the `cpp/` subfolder. A Python package (`seqcleave`) wrapping it via pybind11 lives in `src/seqcleave/` (a "src-layout" Python package, following the convention expected by Python's packaging tools — not to be confused with `cpp/`, which holds the C++ sources).
 
-## Building the C++ code
+### Building the C++ code
 
 You will need [CMake](https://cmake.org/) (3.15+) and a C++17 compiler. The code has no external dependencies to install: [nlohmann/json](https://github.com/nlohmann/json) (JSON parsing) and [spdlog](https://github.com/gabime/spdlog) (logging) are vendored, header-only, directly in `cpp/thirdparty/`, so no network access or package manager is required at build time.
 
@@ -43,9 +133,9 @@ This produces an executable called `protein-cutting` (`protein-cutting.exe` on W
 
 The code should be cross-compiling on any platform with ISO C++ and CMake support (tested on Ubuntu 14.04/16.04 originally, and on Windows with MinGW-w64).
 
-## Running a simulation
+### Running a simulation (CLI)
 
-To run a simulation, you need a JSON file describing the protein(s) and the cut probabilities (see [Configuration format](#configuration-format-json) below). A sample file, `data/lactoferrin.json`, is provided: it contains the structure of bovine lactoferrin and simulates cutting 500 copies of the protein, using probabilities taken from Hamuro et al., 2008 and Powers et al., 1977 (see above for the DOIs).
+To run a simulation, you need a JSON file describing the protein(s) and the cut probabilities (see [Configuration format](#configuration-format-json) above). A sample file, `data/lactoferrin.json`, is provided: it contains the structure of bovine lactoferrin and simulates cutting 500 copies of the protein, using probabilities taken from Hamuro et al., 2008 and Powers et al., 1977 (see above for the DOIs).
 
 ```sh
 ./protein-cutting --input lactoferrin.json
@@ -63,97 +153,16 @@ To run a simulation, you need a JSON file describing the protein(s) and the cut 
 
 By default the program only prints progress/warning/error messages to the console (`info` level) — no per-position debug trace, which used to flood the console/log files in earlier versions of this code.
 
-## Configuration format (JSON)
-
-Simulations are configured entirely from a JSON file — no need to modify the source code to change the protein(s), probabilities, or simulation parameters. Comments (`//` and `/* */`) are supported by the loader and stripped before parsing, so configuration files can be annotated just like code; `data/lactoferrin.json` is heavily commented and is the best starting point for writing your own.
-
-The file has four top-level sections:
-
-- **`parameters`**: simulation-wide settings — `randomSeed` (`null` for a time-based seed), `maxTime` (max iterations), `maxDH` (stop once this degree of hydrolysis is reached), `maxAttemptsPerTime`, `maxAttempts` (stop after this many consecutive failed cut attempts), and the experimental `initialEnzyme` / `enzymeAlwaysDying` / `enzymeDyingRatio` (enzyme activity decaying over time).
-- **`proteins`**: an array of proteins to simulate, each with a `name`, a `quantity` (number of copies), a `sequence` (the amino-acid chain), and `disulfideBonds` (1-indexed positions the enzyme finds harder to cut — not all of them are strictly disulfide bonds, some are glycosylations).
-- **`cuts`**: base probability of cutting a bond, keyed by the amino-acid to the left (P1) and right (P1') of the bond, e.g. `"cuts": { "f": { "y": 0.65, "f": 0.85, ... }, ... }`. Bonds not listed default to probability 0.
-- **`alterations`** / **`terminalAlterations`**: position-dependent adjustments to the base probability for amino-acids found further away from the bond (P2-P4 / P2'-P4'), and multipliers applied near either end of a peptide chain.
-
-Until 2026, configuration files were XML, parsed with the [tinyxml](http://www.grinninglizard.com/tinyxml/) library; the format was switched to JSON (parsed with nlohmann/json) for easier editing and future Python bindings. The original sample file, `data/lactoferrin.xml`, is kept in the repository as a historical reference — it is no longer read by the code. The one-off script used for the conversion, `scripts/xml_to_json.py`, is kept for reference in case other old XML configuration files need migrating.
-
-## Output format
-
-The program produces a CSV file (`statistics.csv` by default) tracking the quantity of each peptide over the course of the simulation. Columns are `time` (iteration count), `time2` (number of cuts so far), `enzyme` (currently always 1.0, reserved for future developments), followed by one column per distinct peptide produced during the simulation, in alphabetical order. Each row gives the count of each peptide at that point in the simulation. The resulting file is usually large (~70 MB for the lactoferrin example); extracting meaningful information from it typically requires a separate analysis script rather than manual inspection.
-
-## Python package
-
-The C++ core is also available from Python, as the `endocleave` package: [pybind11](https://github.com/pybind/pybind11) bindings over the same core used by the CLI, built with [scikit-build-core](https://github.com/scikit-build/scikit-build-core) so a normal `pip install` compiles everything automatically — no separate C++ build step, and no dependency on CMake or a compiler once installed.
-
-```sh
-pip install .
-```
-
-(run from the repository root; not yet published on PyPI).
-
-```python
-import endocleave
-
-# high-level: JSON file or dict in, a pandas.DataFrame out (same columns as the CSV above)
-df = endocleave.simulate("data/lactoferrin.json")
-
-# optionally, also write the CSV file, same as the CLI's --output
-df = endocleave.simulate("data/lactoferrin.json", output="statistics.csv")
-```
-
-Don't have a configuration handy? The bovine lactoferrin / pepsin case study from the paper ships with the package, in three forms — a ready-to-run combination, and its two halves separately (useful, for example, to try pepsin's published cleavage data against a protein of your own):
-
-```python
-df = endocleave.simulate(endocleave.example_config())   # ready to run as-is
-
-endocleave.lactoferrin_protein()   # -> just the "proteins" entry (sequence, disulfideBonds, quantity)
-endocleave.pepsin_cuts()           # -> just the enzyme data ("cuts", "alterations", "terminalAlterations")
-
-# e.g. pepsin's cleavage data against a different protein:
-config = {
-    "parameters": {"maxDH": 0.1},
-    "proteins": [{"sequence": "your own sequence here", "quantity": 100}],
-    **endocleave.pepsin_cuts(),
-}
-```
-
-For full control, use the lower-level `EndoproteaseModel` class directly — a near 1-to-1 binding of the C++ class, with plain read/write attributes for every simulation parameter:
-
-```python
-from endocleave import EndoproteaseModel
-import pandas as pd
-
-model = EndoproteaseModel()
-model.read_json("data/lactoferrin.json")   # or model.read_config({...}) for a native dict
-model.max_dh = 0.05
-model.run()
-df = pd.DataFrame(model.compute_time_series())
-```
-
-Logging goes through the standard `logging` module, under the name `"endocleave"`. Verbosity is controlled with `endocleave.set_log_level(...)` rather than `logging.getLogger("endocleave").setLevel(...)` directly: the native core uses its own log level as a performance gate (deciding whether to even format a message), so the two have to stay in sync, and `set_log_level()` does that in one call.
-
-```python
-endocleave.set_log_level("debug")
-```
-
-### Running the tests
-
-```sh
-pip install -e ".[test]"
-pytest
-```
-
-The suite (`tests/`) covers the Python bindings and the `simulate()`/`EndoproteaseModel` API: a fixed-seed regression check (meaningful and portable across platforms, since the random engine is `std::mt19937`, a standardized algorithm), a mass-balance invariant (every cut turns one peptide into two, so the total peptide count must always equal the original quantity plus the number of cuts so far — true for any config or seed), and error handling for malformed input.
-
 ## Project status / roadmap
 
 - ✅ Configuration format switched from XML to JSON.
 - ✅ Logging rewritten (leveled, quiet by default, opt-in file output) in preparation for reuse from other languages.
 - ✅ Model and parameter names generalized (`EndoproteaseModel`, `enzyme*` fields) — the simulation was never pepsin-specific, and now neither is its naming.
-- ✅ Repository reorganized (`cpp/` for the C++ core, `src/endocleave/` for the Python package).
+- ✅ Repository reorganized (`cpp/` for the C++ core, `src/seqcleave/` for the Python package).
 - ✅ pybind11 bindings, a `simulate()` convenience API, and a working `pip install .` (via scikit-build-core).
 - ✅ A `pytest` suite (`tests/`) covering the Python API, a fixed-seed regression check, and a seed-independent structural invariant.
 - ✅ CI (`.github/workflows/ci.yml`): builds the CLI and runs the pytest suite on Linux, macOS, and Windows on every push/PR.
-- ⏳ Planned: publish `endocleave` on PyPI, with prebuilt wheels (via `cibuildwheel`) for the common platforms.
+- ⏳ Planned: publish `seqcleave` on PyPI, with prebuilt wheels (via `cibuildwheel`) for the common platforms.
 
 ## Citation
 

@@ -1,4 +1,4 @@
-"""endocleave: stochastic simulation of protein hydrolysis by endoproteases.
+"""seqcleave: stochastic simulation of protein hydrolysis by endoproteases.
 
 Simulates an endoprotease (pepsin, by default -- but the model works for any enzyme, given
 per-position cleavage-frequency data) cutting one or more copies of a protein, and reports how
@@ -13,13 +13,13 @@ Two ways to use this package:
   results as a CSV file or an in-memory dict.
 
 New to this and don't have a configuration handy? :func:`example_config` returns one that's
-ready to run (``endocleave.simulate(endocleave.example_config())``); :func:`lactoferrin_protein`
+ready to run (``seqcleave.simulate(seqcleave.example_config())``); :func:`lactoferrin_protein`
 and :func:`pepsin_cuts` give you its two halves separately, e.g. to try pepsin's published
 cleavage data against a protein of your own.
 
 Logging goes through the standard library's ``logging`` module, under the name
-``"endocleave"``. Verbosity is controlled with :func:`set_log_level` rather than
-``logging.getLogger("endocleave").setLevel(...)`` directly -- see that function's docstring
+``"seqcleave"``. Verbosity is controlled with :func:`set_log_level` rather than
+``logging.getLogger("seqcleave").setLevel(...)`` directly -- see that function's docstring
 for why.
 """
 
@@ -38,7 +38,7 @@ from ._core import EndoproteaseModel, set_log_level
 try:
     from importlib.metadata import PackageNotFoundError, version as _version
 
-    __version__ = _version("endocleave")
+    __version__ = _version("seqcleave")
 except PackageNotFoundError:
     # package is being imported without being installed (e.g. running straight from a
     # source checkout without "pip install -e ."): fall back to a clearly-not-real version
@@ -139,7 +139,7 @@ def pepsin_cuts() -> Dict[str, Any]:
         config = {
             "parameters": {"maxDH": 0.1},
             "proteins": [{"sequence": "your own sequence here", "quantity": 100}],
-            **endocleave.pepsin_cuts(),
+            **seqcleave.pepsin_cuts(),
         }
 
     A fresh dict is returned on every call, safe to mutate without affecting later calls.
@@ -161,10 +161,10 @@ def example_config() -> Dict[str, Any]:
     ``parameters`` used in the bundled sample file -- if you want to change quantity, maxDH,
     or the random seed, get this dict and edit it directly rather than building one by hand::
 
-        config = endocleave.example_config()
+        config = seqcleave.example_config()
         config["proteins"][0]["quantity"] = 5
         config["parameters"]["maxDH"] = 0.02
-        df = endocleave.simulate(config)
+        df = seqcleave.simulate(config)
 
     A fresh dict is returned on every call, safe to mutate without affecting later calls.
     """

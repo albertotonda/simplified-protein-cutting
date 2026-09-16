@@ -21,8 +21,8 @@
 namespace logging
 {
 	// name of the shared logger; also the name the Python bindings register with Python's
-	// own `logging` module (logging.getLogger("endocleave"))
-	constexpr const char* LOGGER_NAME = "endocleave";
+	// own `logging` module (logging.getLogger("seqcleave"))
+	constexpr const char* LOGGER_NAME = "seqcleave";
 
 	// the shared logger instance; silent (null sink) until setSinks() is called
 	std::shared_ptr<spdlog::logger>& get();

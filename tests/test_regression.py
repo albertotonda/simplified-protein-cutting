@@ -10,7 +10,7 @@ test like this fragile across platforms/compilers.
 
 import pandas as pd
 
-import endocleave
+import seqcleave
 
 
 def test_mass_balance_invariant_holds_at_every_sampled_row(lactoferrin_config):
@@ -18,7 +18,7 @@ def test_mass_balance_invariant_holds_at_every_sampled_row(lactoferrin_config):
     # of *which* peptide gets cut or into what. So at any point in time, the total count of
     # all peptides must equal the original protein quantity plus the number of cuts so far
     # -- true for any config, any seed, independent of the exact stochastic path taken.
-    df = endocleave.simulate(lactoferrin_config)
+    df = seqcleave.simulate(lactoferrin_config)
 
     original_quantity = lactoferrin_config["proteins"][0]["quantity"]
     peptide_columns = df.columns[3:]
@@ -30,7 +30,7 @@ def test_mass_balance_invariant_holds_at_every_sampled_row(lactoferrin_config):
 
 
 def test_time_and_time2_are_non_decreasing(lactoferrin_config):
-    df = endocleave.simulate(lactoferrin_config)
+    df = seqcleave.simulate(lactoferrin_config)
 
     assert df["time"].is_monotonic_increasing
     assert df["time2"].is_monotonic_increasing
@@ -47,7 +47,7 @@ def test_fixed_seed_reproduces_known_values(lactoferrin_config):
     # (std::mt19937) but are themselves only implementation-defined, so libstdc++ (Linux,
     # MinGW) and libc++ (macOS/Clang) silently produced different results from the exact
     # same seed. Found via this very test failing in CI on macOS but not Linux/Windows.
-    df = endocleave.simulate(lactoferrin_config)
+    df = seqcleave.simulate(lactoferrin_config)
 
     assert df.shape == (18, 327)
 

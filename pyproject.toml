@@ -3,7 +3,7 @@ requires = ["scikit-build-core>=0.10", "pybind11>=2.13"]
 build-backend = "scikit_build_core.build"
 
 [project]
-name = "endocleave"
+name = "seqcleave"
 version = "0.1.0"
 description = "Stochastic simulation of protein hydrolysis by endoproteases, from cleavage-frequency data"
 readme = "README.md"
@@ -39,7 +39,7 @@ cmake.source-dir = "cpp"
 cmake.build-type = "Release"
 # only the Python extension module gets install()'d by cpp/CMakeLists.txt (see there); the
 # CLI executable is deliberately not bundled into the wheel for now
-wheel.packages = ["src/endocleave"]
+wheel.packages = ["src/seqcleave"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -53,4 +53,4 @@ build-verbosity = 1
 # actually import and run the built wheel (not just "did it build") for every single wheel,
 # on every platform, right after building it -- this is exactly the kind of check that would
 # have caught the MinGW-DLL-dependency issue found earlier, automatically, for free
-test-command = "python -c \"import endocleave; df = endocleave.simulate({'parameters': {'maxDH': 0.05, 'randomSeed': 1}, 'proteins': [{'quantity': 3, 'sequence': 'aaffaa'}], 'cuts': {'f': {'f': 1.0}}}); assert len(df) > 0; print('endocleave', endocleave.__version__, 'OK:', df.shape)\""
+test-command = "python -c \"import seqcleave; df = seqcleave.simulate({'parameters': {'maxDH': 0.05, 'randomSeed': 1}, 'proteins': [{'quantity': 3, 'sequence': 'aaffaa'}], 'cuts': {'f': {'f': 1.0}}}); assert len(df) > 0; print('seqcleave', seqcleave.__version__, 'OK:', df.shape)\""
