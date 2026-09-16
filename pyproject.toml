@@ -26,6 +26,9 @@ dependencies = [
     "pandas>=1.5",
 ]
 
+[project.optional-dependencies]
+test = ["pytest>=7"]
+
 [project.urls]
 Homepage = "https://github.com/albertotonda/simplified-protein-cutting"
 Repository = "https://github.com/albertotonda/simplified-protein-cutting"
@@ -37,3 +40,6 @@ cmake.build-type = "Release"
 # only the Python extension module gets install()'d by cpp/CMakeLists.txt (see there); the
 # CLI executable is deliberately not bundled into the wheel for now
 wheel.packages = ["src/endocleave"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

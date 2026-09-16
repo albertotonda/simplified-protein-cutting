@@ -19,6 +19,7 @@ cpp/                  C++ source code: the core, the CLI, and the pybind11 bindi
 cpp/thirdparty/       vendored dependencies (nlohmann/json, spdlog, pybind11_json)
 src/endocleave/       the Python package (pure-Python wrapper; the compiled
                       extension lands here too once built, see "Python package" below)
+tests/                pytest suite for the Python package (see "Running the tests" below)
 pyproject.toml        Python packaging config (scikit-build-core)
 ```
 
@@ -115,6 +116,15 @@ Logging goes through the standard `logging` module, under the name `"endocleave"
 endocleave.set_log_level("debug")
 ```
 
+### Running the tests
+
+```sh
+pip install -e ".[test]"
+pytest
+```
+
+The suite (`tests/`) covers the Python bindings and the `simulate()`/`EndoproteaseModel` API: a fixed-seed regression check (meaningful and portable across platforms, since the random engine is `std::mt19937`, a standardized algorithm), a mass-balance invariant (every cut turns one peptide into two, so the total peptide count must always equal the original quantity plus the number of cuts so far — true for any config or seed), and error handling for malformed input.
+
 ## Project status / roadmap
 
 - ✅ Configuration format switched from XML to JSON.
@@ -122,7 +132,8 @@ endocleave.set_log_level("debug")
 - ✅ Model and parameter names generalized (`EndoproteaseModel`, `enzyme*` fields) — the simulation was never pepsin-specific, and now neither is its naming.
 - ✅ Repository reorganized (`cpp/` for the C++ core, `src/endocleave/` for the Python package).
 - ✅ pybind11 bindings, a `simulate()` convenience API, and a working `pip install .` (via scikit-build-core).
-- ⏳ Planned: publish `endocleave` on PyPI, with prebuilt wheels (via `cibuildwheel`) for the common platforms.
+- ✅ A `pytest` suite (`tests/`) covering the Python API, a fixed-seed regression check, and a seed-independent structural invariant.
+- ⏳ Planned: CI (build + test on Linux/macOS/Windows), then publish `endocleave` on PyPI with prebuilt wheels (via `cibuildwheel`) for the common platforms.
 
 ## Citation
 
