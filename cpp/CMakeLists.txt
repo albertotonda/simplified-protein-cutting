@@ -4,6 +4,14 @@ project(PROTEIN_CUTTING CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+if(MSVC)
+	# spdlog bundles fmt, which refuses to compile under MSVC at all without this: a
+	# static_assert enforces the choice explicitly rather than silently assuming the wrong
+	# source/execution character set. Found by CI (this project has no MSVC build locally
+	# to catch it against) -- GCC/Clang default to UTF-8 and never needed this flag.
+	add_compile_options(/utf-8)
+endif()
+
 # nlohmann/json is vendored as a single header under thirdparty/, so no
 # network access or package manager is required to build (config parsing
 # used to be done with tinyxml, also vendored in-tree, until the switch to JSON)

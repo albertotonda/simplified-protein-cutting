@@ -51,7 +51,12 @@ public:
 	}
 	
 	// compare two peptides
-	bool operator==(Peptide& p)
+	// NOTE: both "const" here are required, not stylistic -- std::unique() (used on a
+	// vector<Peptide> in EndoproteaseModel::run()) compares through const references
+	// internally, per the standard's requirements for EqualityComparable. libstdc++
+	// (MinGW, Linux) tolerated the previous non-const signature; libc++ (macOS/Clang)
+	// correctly rejects it, refusing to compile at all.
+	bool operator==(const Peptide& p) const
 	{
 		return this->peptide == p.peptide;
 	}
