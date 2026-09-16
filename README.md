@@ -100,6 +100,22 @@ df = endocleave.simulate("data/lactoferrin.json")
 df = endocleave.simulate("data/lactoferrin.json", output="statistics.csv")
 ```
 
+Don't have a configuration handy? The bovine lactoferrin / pepsin case study from the paper ships with the package, in three forms — a ready-to-run combination, and its two halves separately (useful, for example, to try pepsin's published cleavage data against a protein of your own):
+
+```python
+df = endocleave.simulate(endocleave.example_config())   # ready to run as-is
+
+endocleave.lactoferrin_protein()   # -> just the "proteins" entry (sequence, disulfideBonds, quantity)
+endocleave.pepsin_cuts()           # -> just the enzyme data ("cuts", "alterations", "terminalAlterations")
+
+# e.g. pepsin's cleavage data against a different protein:
+config = {
+    "parameters": {"maxDH": 0.1},
+    "proteins": [{"sequence": "your own sequence here", "quantity": 100}],
+    **endocleave.pepsin_cuts(),
+}
+```
+
 For full control, use the lower-level `EndoproteaseModel` class directly — a near 1-to-1 binding of the C++ class, with plain read/write attributes for every simulation parameter:
 
 ```python
