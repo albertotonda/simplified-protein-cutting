@@ -1,15 +1,21 @@
 name: Build and publish wheels
 
-# Two ways to trigger a publish, deliberately kept separate:
+# Three triggers:
+#   - pull_request (to main): builds the wheels + sdist only, publishes nothing. A packaging
+#     regression check on every PR -- neither publish job's "if:" matches a pull_request
+#     event, so this is a pure build-and-test-import check (see [tool.cibuildwheel]'s
+#     test-command in pyproject.toml), safe to run on every PR.
 #   - workflow_dispatch (manual, from the Actions tab): builds everything and publishes to
 #     TestPyPI. This is the dry run -- safe to run as many times as needed.
 #   - a GitHub Release being published: builds everything and publishes to the real PyPI.
-# Both require a "pending trusted publisher" to have already been registered on the
-# corresponding index (test.pypi.org / pypi.org) for this repo + workflow + environment
-# name -- see the project README / release notes for the exact values. No API token is
-# stored anywhere: authentication is via short-lived OIDC tokens (permissions: id-token:
-# write, below), which is why each publish job needs its own "environment:".
+# The two publish triggers both require a "pending trusted publisher" to have already been
+# registered on the corresponding index (test.pypi.org / pypi.org) for this repo + workflow
+# + environment name -- see the project README / release notes for the exact values. No API
+# token is stored anywhere: authentication is via short-lived OIDC tokens (permissions:
+# id-token: write, below), which is why each publish job needs its own "environment:".
 on:
+  pull_request:
+    branches: [main]
   workflow_dispatch: {}
   release:
     types: [published]
