@@ -56,10 +56,20 @@ endif()
 # nlohmann/json and spdlog above -- it's a normal Python *build-time* dependency, resolved
 # via "pip install pybind11" (or automatically, once packaged with scikit-build-core, from
 # pyproject.toml's [build-system] requires).
-find_package(Python COMPONENTS Interpreter Development QUIET)
+#
+# NOTE: deliberately NOT also calling find_package(Python ...) ourselves first.
+# pybind11_add_module() already does its own Python detection internally -- and does it more
+# reliably than a separate, explicit find_package(Python COMPONENTS Interpreter Development)
+# call turned out to be: inside cibuildwheel's manylinux containers specifically, that separate
+# call silently failed to find the container's per-version Python, even though it's the exact
+# same Python pybind11 itself found a moment later on its own. Since the build was gated on
+# *both* being found, the whole block was silently skipped -- producing a "successful" wheel
+# with no compiled extension inside it at all (caught by cibuildwheel's test-command, and by
+# auditwheel refusing to repair a wheel with no shared library in it). Gating on pybind11_FOUND
+# alone avoids re-implementing (and re-breaking) what pybind11 already gets right.
 find_package(pybind11 CONFIG QUIET)
 
-if(Python_FOUND AND pybind11_FOUND)
+if(pybind11_FOUND)
 	pybind11_add_module(_core bindings.cpp)
 	target_link_libraries(_core PRIVATE protein-cutting-core)
 	# pybind11_json is vendored header-only, same style as nlohmann/json and spdlog above
@@ -82,5 +92,5 @@ if(Python_FOUND AND pybind11_FOUND)
 	# from src/endocleave/ (see pyproject.toml's [tool.scikit-build] wheel.packages).
 	install(TARGETS _core DESTINATION endocleave)
 else()
-	message(STATUS "Python and/or pybind11 not found: skipping the _core Python extension module (the CLI is unaffected)")
+	message(STATUS "pybind11 not found: skipping the _core Python extension module (the CLI is unaffected)")
 endif()

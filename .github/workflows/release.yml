@@ -1,0 +1,115 @@
+name: Build and publish wheels
+
+# Three triggers:
+#   - pull_request (to main): builds the wheels + sdist only, publishes nothing. A packaging
+#     regression check on every PR -- neither publish job's "if:" matches a pull_request
+#     event, so this is a pure build-and-test-import check (see [tool.cibuildwheel]'s
+#     test-command in pyproject.toml), safe to run on every PR.
+#   - workflow_dispatch (manual, from the Actions tab): builds everything and publishes to
+#     TestPyPI. This is the dry run -- safe to run as many times as needed.
+#   - a GitHub Release being published: builds everything and publishes to the real PyPI.
+# The two publish triggers both require a "pending trusted publisher" to have already been
+# registered on the corresponding index (test.pypi.org / pypi.org) for this repo + workflow
+# + environment name -- see the project README / release notes for the exact values. No API
+# token is stored anywhere: authentication is via short-lived OIDC tokens (permissions:
+# id-token: write, below), which is why each publish job needs its own "environment:".
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch: {}
+  release:
+    types: [published]
+
+jobs:
+  build_wheels:
+    name: Wheels (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # macos-15-intel = Intel, macos-14 = Apple Silicon (GitHub retired plain Intel
+        # runners at "macos-13"; macos-14 and later default to Apple Silicon): built
+        # natively on each rather than cross-compiling a universal2 wheel, to sidestep
+        # cross-compilation entirely.
+        os: [ubuntu-latest, windows-latest, macos-15-intel, macos-14]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v4.2.1
+        # build/skip/test-command etc. all come from pyproject.toml's [tool.cibuildwheel]
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.os }}
+          path: wheelhouse/*.whl
+
+  build_sdist:
+    name: Source distribution
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build sdist
+        run: pipx run build --sdist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sdist
+          path: dist/*.tar.gz
+
+  publish_testpypi:
+    name: Publish to TestPyPI
+    needs: [build_wheels, build_sdist]
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/endocleave
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: wheels-*
+          path: dist
+          merge-multiple: true
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: sdist
+          path: dist
+
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          skip-existing: true
+
+  publish_pypi:
+    name: Publish to PyPI
+    needs: [build_wheels, build_sdist]
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/endocleave
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: wheels-*
+          path: dist
+          merge-multiple: true
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: sdist
+          path: dist
+
+      - uses: pypa/gh-action-pypi-publish@release/v1
