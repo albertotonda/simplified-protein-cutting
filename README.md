@@ -2,44 +2,113 @@
 
 [![CI](https://github.com/albertotonda/simplified-protein-cutting/actions/workflows/ci.yml/badge.svg)](https://github.com/albertotonda/simplified-protein-cutting/actions/workflows/ci.yml)
 
-Modeling protein hydrolysis and release of peptides by endoproteases requires complex simulations, typically taking into account the 3D structure of both the enzymes and the target protein. Such structures can sometimes be difficult to predict starting from the protein's acido-aminic sequence.
+Modeling protein hydrolysis and release of peptides by endoproteases requires complex, compute-intensive simulations, typically taking into account the 3D structure of both the enzymes and the target protein. Furthermore, despite recent advancements in folding, such structures can still be difficult to predict starting from the protein's acido-aminic sequence.
 
-This repository contains the code for an alternative approach, published in [Tonda et al. (2017), _In silico modeling of protein hydrolysis by endoproteases: a case study on pepsin digestion of bovine lactoferrin_, Food & Function, Vol. 8, Issue 12, DOI: 10.1039/C7FO00830A](https://pubs.rsc.org/fo/article-abstract/8/12/4404/566726/In-silico-modeling-of-protein-hydrolysis-by). The idea is to just consider the linear sequence of amino-acids, and then simulate the behavior of an enzyme starting from the frequency of cuts observed during previous experiments. The final peptides obtained by the simulation are qualitatively coherent with real-world experiments, even though the exact absolute quantities might be different.
+This repository contains the code for an alternative approach, originally published in [Tonda et al. (2017), _In silico modeling of protein hydrolysis by endoproteases: a case study on pepsin digestion of bovine lactoferrin_, Food & Function, Vol. 8, Issue 12, DOI: 10.1039/C7FO00830A](https://pubs.rsc.org/fo/article-abstract/8/12/4404/566726/In-silico-modeling-of-protein-hydrolysis-by). The idea is to just consider the linear sequence of amino-acids, and then simulate the behavior of an enzyme starting from the frequency of cuts observed during previous experiments, plus other information, for example the presence of disuflide bonds. The final peptides obtained by the simulation aim to be qualitatively coherent with real-world experiments, even though the exact absolute quantities might be different.
 
-If you use this software in your publications, please cite the paper (see [Citation](#citation) below).
+If you use this software in your publications, please cite the original paper (see [Citing this software](#citing-this-software) below).
 
 ## What is this software?
 
-In a nutshell, this software simulates the action of an enzyme on several copies of a protein (protein structure given in input). The model is not specific to any one enzyme: it works for any endoprotease, as long as cleavage frequency data is available for it. The enzyme's behavior is considered stochastic, and during the simulation it will cut bonds with a certain probability, depending on the amino-acids to the left and right of a bond (positions P4, P3, P2, P1, P1', P2', P3', P4'). The sample configuration shipped with this repository models pepsin, using probabilities computed from analyses performed by [Hamuro et al., 2008](https://pubmed.ncbi.nlm.nih.gov/18327892/) and [Powers et al., 1977](https://link.springer.com/chapter/10.1007/978-1-4757-0719-9_9).
+In a nutshell, this software simulates the action of an enzyme on several copies of a protein (protein structure given in input). The model is not specific to any one enzyme: it works for any endoprotease, as long as cleavage frequency data is available for it. The enzyme's behavior is assumed to be **stochastic**, and during the simulation it will cut bonds with a certain probability, depending on the four amino-acids to the left (positions traditionally labeled as P4, P3, P2, P1) and right (P1', P2', P3', P4') of a bond. Here below is the flowchart of the algorithm.
 
-Most people will want the **Python package**, described next. The C++ core, CLI, and file formats behind it are documented further down, in [C++ core](#c-core).
+<p align="center">
+  <a href="https://raw.githubusercontent.com/albertotonda/simplified-protein-cutting/main/figures/flowchart.jpg">
+    <img src="https://raw.githubusercontent.com/albertotonda/simplified-protein-cutting/main/figures/flowchart.jpg" alt="Flow chart of the simulation" width="360">
+  </a>
+</p>
+
+The sample configuration shipped with this package models **pepsin**, using probabilities computed from analyses performed by [Hamuro et al., 2008](https://pubmed.ncbi.nlm.nih.gov/18327892/) and [Powers et al., 1977](https://link.springer.com/chapter/10.1007/978-1-4757-0719-9_9), which was the case study for the original [Tonda et al., 2017](https://pubs.rsc.org/fo/article-abstract/8/12/4404/566726/In-silico-modeling-of-protein-hydrolysis-by) paper.
+
+Most people will want the **Python package**, described next. Under the Python hood, there is a core written in C++, for speed. The C++ core, CLI, and file formats behind it are documented further down, in [C++ core](#c-core).
 
 ## Python package
 
-The C++ core is available from Python as the `seqcleave` package: [pybind11](https://github.com/pybind/pybind11) bindings over the same core used by the CLI, built with [scikit-build-core](https://github.com/scikit-build/scikit-build-core) so a normal `pip install` compiles everything automatically — no separate C++ build step, and no dependency on CMake or a compiler once installed.
+You can install this software as the `seqcleave` package, with:
 
 ```sh
-pip install .
+pip install seqcleave
 ```
 
-(run from the repository root; not yet published on PyPI).
+To install from a checkout of this repository instead (e.g. to test local changes), run `pip install .` from the repository root; that will also compile the extension automatically, via `scikit-build-core`.
+
+You can check whether everything works fine by running the case study, loading the configuration for **pepsin** enzyme cleaving the protein **bovine lactoferrin**:
 
 ```python
 import seqcleave
 
-# high-level: JSON file or dict in, a pandas.DataFrame out (same columns as the CSV described
-# in "Output format" below)
-df = seqcleave.simulate("data/lactoferrin.json")
+# load complete configuration as a dictionary
+config = seqcleave.example_config()
+# set the random seed for reproducibility
+config["randomSeed"] = 42
+# reduce initial quantity of the first protein (pepsin) to speed up the computation
+config["proteins"][0]["quantity"] = 10
 
-# optionally, also write the CSV file, same as the CLI's --output
-df = seqcleave.simulate("data/lactoferrin.json", output="statistics.csv")
+# launch the simulation (it might take a few seconds)
+df = seqcleave.simulate(config)
+# the DataFrame contains the quantity of different peptides at each instant of time 
+print(df)
+# if an output filename is specified, the result is also saved as a CSV file
+#df = seqcleave.simulate(config, output="peptides.csv")
+```
+The output should be:
+```
+    time  time2  enzyme  a  aca  acaf  acafltr  ad  aedvgdva  ...  
+0      0      0     1.0  0    0     0        0   0         0  ...     
+1    114     10     1.0  0    0     0        0   0         0  ...      
+2    165     20     1.0  0    0     0        0   ..   ...    ...                            ...                 ...                    ...         
+68  9951    680     1.0  5    4     2        0   2         1  ...      
+
+[69 rows x 1015 columns]
 ```
 
-Don't have a configuration handy? The bovine lactoferrin / pepsin case study from the paper ships with the package, in three forms — a ready-to-run combination, and its two halves separately (useful, for example, to try pepsin's published cleavage data against a protein of your own):
+`seqcleave.simulate()` also accepts a JSON file in input. The configuration includes the protein sequence(s), the cutting probability for each bond, and several other parameters used in the simulation:
 
 ```python
-df = seqcleave.simulate(seqcleave.example_config())   # ready to run as-is
+print(seqcleave.example_config())
+```
+Output:
+```python
+{
+ 'parameters': {'randomSeed': None,
+                'maxTime': 1200000,
+                'maxDH': 0.1,
+                'maxAttemptsPerTime': 1,
+                'maxAttempts': 1000,
+                'initialEnzyme': 1.0,
+                'enzymeAlwaysDying': False,
+                'enzymeDyingRatio': 1.0},
+ 'proteins': [{'name': 'lactoferrin',
+               'quantity': 500,
+               'disulfideBonds': [9,
+                                  19,
+                                  ...
+                                  545],
+               'sequence': 'aprknvrwctisqpewfkcrrwqwrmkklga...'}],
+ 'cuts': {'f': {'y': 0.65,
+                'f': 0.85,
+                    ...
+                'g': 0.28},
+          'l': {'y': 0.68,
+                'f': 0.84,
+                    ...
+                'g': 0.07},
+          ...
+          'k': {'i': 0.02, 'g': 0.02},
+          'h': {'p': 0.05}},
+ 'alterations': {
+    'f': {'left': {'2': 0.068, '3': 0.065, '4': 0.178},
+          'right': {'2': 0.076, '3': 0.138, '4': 0.138}},
+                ...
+    'p': {'left': {'2': 0.002, '3': 0.137, '4': 0.194},
+          'right': {'2': 0.013, '3': 0.027, '4': 0.207}}},
+ 'terminalAlterations': {'left': {'2': 0.3333, '3': 0.3333},
+                         'right': {'2': 0.3333, '3': 0.3333}}
+}
+```
 
+The information related to the enzyme and the protein are also accessible separately:
+```python
 seqcleave.lactoferrin_protein()   # -> just the "proteins" entry (sequence, disulfideBonds, quantity)
 seqcleave.pepsin_cuts()           # -> just the enzyme data ("cuts", "alterations", "terminalAlterations")
 
@@ -51,9 +120,9 @@ config = {
 }
 ```
 
-See [Configuration format (JSON)](#configuration-format-json) below for the full schema `simulate()` accepts (as a dict or a file path).
+See [Configuration format (dictionary and JSON)](#configuration-format-dictionary-and-json) below for the full schema `simulate()` accepts (as a Python dictionary or a JSON file).
 
-For full control, use the lower-level `EndoproteaseModel` class directly — a near 1-to-1 binding of the C++ class, with plain read/write attributes for every simulation parameter:
+For full control, it is also possible to use the lower-level `EndoproteaseModel` class directly — a near 1-to-1 binding of the C++ class, with plain read/write attributes for every simulation parameter:
 
 ```python
 from seqcleave import EndoproteaseModel
@@ -66,37 +135,30 @@ model.run()
 df = pd.DataFrame(model.compute_time_series())
 ```
 
-Logging goes through the standard `logging` module, under the name `"seqcleave"`. Verbosity is controlled with `seqcleave.set_log_level(...)` rather than `logging.getLogger("seqcleave").setLevel(...)` directly: the native core uses its own log level as a performance gate (deciding whether to even format a message), so the two have to stay in sync, and `set_log_level()` does that in one call.
+The simulation returns a `pandas.DataFrame` (named `df` in the examples above), tracking the quantity of each type of peptide generated by the simulation over time. See [Output format](#output-format) below for more detailed information.
 
-```python
-seqcleave.set_log_level("debug")
-```
+## Configuration format (dictionary and JSON)
 
-### Running the tests
-
-```sh
-pip install -e ".[test]"
-pytest
-```
-
-The suite (`tests/`) covers the Python bindings and the `simulate()`/`EndoproteaseModel` API: a fixed-seed regression check (meaningful and portable across platforms, since the random engine is `std::mt19937`, a standardized algorithm), a mass-balance invariant (every cut turns one peptide into two, so the total peptide count must always equal the original quantity plus the number of cuts so far — true for any config or seed), and error handling for malformed input.
-
-## Configuration format (JSON)
-
-Simulations — whether run through the Python package or the CLI — are configured entirely from a JSON file or dict, no need to modify the source code to change the protein(s), probabilities, or simulation parameters. Comments (`//` and `/* */`) are supported by the loader and stripped before parsing, so configuration files can be annotated just like code; `data/lactoferrin.json` is heavily commented and is the best starting point for writing your own.
+Simulations — whether run through the Python package or the CLI — are configured entirely from a JSON file or Python dictionary, no need to modify the source code to change the protein(s), probabilities, or simulation parameters. Comments (`//` and `/* */`) are supported by the loader and stripped before parsing, so configuration files can be annotated just like code; [`lactoferrin.json` in the original repository](https://github.com/albertotonda/simplified-protein-cutting/blob/main/data/lactoferrin.json) is heavily commented and is the best starting point for writing your own JSON.
 
 The file has four top-level sections:
 
-- **`parameters`**: simulation-wide settings — `randomSeed` (`null` for a time-based seed), `maxTime` (max iterations), `maxDH` (stop once this degree of hydrolysis is reached), `maxAttemptsPerTime`, `maxAttempts` (stop after this many consecutive failed cut attempts), and the experimental `initialEnzyme` / `enzymeAlwaysDying` / `enzymeDyingRatio` (enzyme activity decaying over time).
-- **`proteins`**: an array of proteins to simulate, each with a `name`, a `quantity` (number of copies), a `sequence` (the amino-acid chain), and `disulfideBonds` (1-indexed positions the enzyme finds harder to cut — not all of them are strictly disulfide bonds, some are glycosylations).
-- **`cuts`**: base probability of cutting a bond, keyed by the amino-acid to the left (P1) and right (P1') of the bond, e.g. `"cuts": { "f": { "y": 0.65, "f": 0.85, ... }, ... }`. Bonds not listed default to probability 0.
-- **`alterations`** / **`terminalAlterations`**: position-dependent adjustments to the base probability for amino-acids found further away from the bond (P2-P4 / P2'-P4'), and multipliers applied near either end of a peptide chain.
+- **`parameters`**: simulation-wide settings   
+  - `randomSeed` is the seed for the random number generation; fixing it to an integer value (e.g. `42`) will ensure repeatable result; `null` is the option for a time-based seed
+  - `maxTime` is the maximum number of cutting iterations (approximately corresponding to instants of time), once reached the simulation will stop
+  - `maxDH` is the maximum degree of hydrolysis, once reached the simulation will stop
+  - `maxAttemptsPerTime` controls the amount of cutting attempts that the enzyme will perform per iteration before going to the next iteration; sometimes, especially when only small peptides with strong bonds are available, the enzyme will not manage to cut
+  - `maxAttempts` once this number of failed attempts is reached, the simulation will stop; the enzyme did not find anything to cut
+  - `initialEnzyme` / `enzymeAlwaysDying` / `enzymeDyingRatio` are all experimental parameters to regulate enzyme activity decaying over time; we recommend leaving them at the default values (`initialEnzyme : 1.0, enzymeAlwaysDying : False, enzymeDyingRatio : 1.0`)
+- **`proteins`**: an array of proteins to simulate, each with a `name`, a `quantity` (number of copies), a `sequence` (the amino-acid chain), and `disulfideBonds` (1-indexed positions the enzyme finds harder to cut — despite the name, not all of them are strictly disulfide bonds, some can be glycosylations).
+- **`cuts`**: base probability of cutting a bond, keyed by the amino-acid to the left (P1) and right (P1') of the bond, e.g. `"cuts": { "f": { "y": 0.65, "f": 0.85, ... }, ... }` means that the probability of the enzyme cutting a `f-y` bond is `0.65` (65%), while a `f-f` bond will be cut with a `0.85` (85%) probability. Bonds not listed default to probability `0.0` and therefore will never be cut.
+- **`alterations`** / **`terminalAlterations`**: position-dependent adjustments to the base probability for amino-acids found further away from the bond (P2-P4 / P2'-P4'), and multipliers applied near either end of a peptide chain (typically more difficult to cut for an enzyme).
 
-Until 2026, configuration files were XML, parsed with the [tinyxml](http://www.grinninglizard.com/tinyxml/) library; the format was switched to JSON (parsed with nlohmann/json) for easier editing and future Python bindings. The original sample file, `data/lactoferrin.xml`, is kept in the repository as a historical reference — it is no longer read by the code. The one-off script used for the conversion, `scripts/xml_to_json.py`, is kept for reference in case other old XML configuration files need migrating.
+In the original code, configuration files were XML; the format was switched to JSON (parsed with nlohmann/json) for easier editing. If you are curious, [the original sample file, `data/lactoferrin.xml`](https://github.com/albertotonda/simplified-protein-cutting/blob/main/data/lactoferrin.xml), is kept in the repository as a reference.
 
 ## Output format
 
-Both the CLI and `seqcleave.simulate()` produce the same tabular result — a CSV file (`statistics.csv` by default) or, in Python, a `pandas.DataFrame` — tracking the quantity of each peptide over the course of the simulation. Columns are `time` (iteration count), `time2` (number of cuts so far), `enzyme` (currently always 1.0, reserved for future developments), followed by one column per distinct peptide produced during the simulation, in alphabetical order. Each row gives the count of each peptide at that point in the simulation. The full CSV is usually large (~70 MB for the lactoferrin example); extracting meaningful information from it typically requires a separate analysis script rather than manual inspection.
+The result of a `seqcleave.simulate()` is a `pandas.DataFrame` table (and possibly a CSV file), tracking the quantity of each peptide over the course of the simulation. Columns are `time` (iteration count), `time2` (number of cuts so far), `enzyme` (currently always 1.0, reserved for future developments), followed by one column per distinct peptide produced during the simulation, in alphabetical order. Each row gives the count of each peptide at that point in the simulation. The full CSV is usually large (~70 MB for the default lactoferrin example). We recommend using a separate analysis script rather than manual inspection, to extract meaningful information from it.
 
 ## C++ core
 
@@ -162,18 +224,18 @@ By default the program only prints progress/warning/error messages to the consol
 - ✅ pybind11 bindings, a `simulate()` convenience API, and a working `pip install .` (via scikit-build-core).
 - ✅ A `pytest` suite (`tests/`) covering the Python API, a fixed-seed regression check, and a seed-independent structural invariant.
 - ✅ CI (`.github/workflows/ci.yml`): builds the CLI and runs the pytest suite on Linux, macOS, and Windows on every push/PR.
-- ⏳ Planned: publish `seqcleave` on PyPI, with prebuilt wheels (via `cibuildwheel`) for the common platforms.
+- ✅ `seqcleave` [published on PyPI](https://pypi.org/project/seqcleave/), with prebuilt wheels (via `cibuildwheel`) for Linux, Windows, and macOS (Intel + Apple Silicon).
 
-## Citation
+## Citing this software
 
 If you use this software in your publications, please cite:
 
-> Tonda, Alberto and Grosvenor, Anita J and Clerens, Stefan and Le Feunteun, Steven,
+> Tonda, Alberto and Grosvenor, Anita J. and Clerens, Stefan and Le Feunteun, Steven,
 > "In silico modeling of protein hydrolysis by endoproteases: a case study on pepsin digestion of bovine lactoferrin",
 > Food & Function, 2017, DOI: 10.1039/C7FO00830A
 
 <details open>
-<summary>BibTeX</summary>
+<summary>BibTeX entry</summary>
 
 ```bibtex
 @article{tonda2017insilico,
@@ -197,7 +259,7 @@ If you use this software in your publications, please cite:
 
 ## License
 
-Copyright (c) 2017, Alberto Tonda \<alberto.tonda@gmail.com\>
+Copyright (c) 2017-2026, Alberto Tonda \<alberto.tonda@gmail.com\>
 
 Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.
 
@@ -205,4 +267,4 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 
 `nlohmann/json` (vendored in `cpp/thirdparty/nlohmann/`) is authored by Niels Lohmann and distributed under the MIT license. `spdlog` (vendored in `cpp/thirdparty/spdlog/`) is authored by Gabi Melman and distributed under the MIT license. `pybind11_json` (vendored in `cpp/thirdparty/pybind11_json/`) is authored by Martin Renou and distributed under the BSD 3-Clause license. [pybind11](https://github.com/pybind/pybind11) itself and [scikit-build-core](https://github.com/scikit-build/scikit-build-core) are build-time-only dependencies (not vendored, resolved automatically by `pip` from `pyproject.toml`), both distributed under permissive licenses (BSD-style and Apache 2.0, respectively). The original tinyxml library (no longer used, kept out of the repository) was authored by Lee Thomason, Yves Berquin, and Andrew Ellerton.
 
-In case you need help, advice, or you notice a bug, please contact Alberto Tonda \<alberto.tonda@gmail.com\>.
+In case you need help, advice, or you notice a bug, please contact **Alberto Tonda** \<alberto.tonda@gmail.com\> or open a Pull Request on GitHub.
