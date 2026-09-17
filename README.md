@@ -225,6 +225,11 @@ By default the program only prints progress/warning/error messages to the consol
 - ✅ A `pytest` suite (`tests/`) covering the Python API, a fixed-seed regression check, and a seed-independent structural invariant.
 - ✅ CI (`.github/workflows/ci.yml`): builds the CLI and runs the pytest suite on Linux, macOS, and Windows on every push/PR.
 - ✅ `seqcleave` [published on PyPI](https://pypi.org/project/seqcleave/), with prebuilt wheels (via `cibuildwheel`) for Linux, Windows, and macOS (Intel + Apple Silicon).
+- ⌛ Replace list of proteins in the configuration file with a dictionary indexed with human-readable protein names (e.g. `lactoferrin`).
+- ⌛ Add verbosity regulation to the `seqcleave.simulate()` function; at the moment, it is completely silent.
+- ⌛ Or at least, add section of the README where we explain how to see the logs on Python.
+- ⌛ Change the name of the `seqcleave.example_config()` to `seqcleave.config_pepsin_lactoferrin()`, as we might eventually add more examples.
+- ⌛ Add more examples.
 
 ## Citing this software
 
